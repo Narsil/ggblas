@@ -280,15 +280,7 @@ mod tests {
         let pool = ThreadPool::new(num_cpus::get());
         matmul::<true>(&a, &b, &mut c).unwrap();
         ggml_matmul::<true>(&a, &b, &mut c2, &pool).unwrap();
-        // assert_eq!(c.data()[..10], c2.data()[..10]);
-        // assert_eq!(
-        //     c.data()[c.data().len() - 10..],
-        //     c2.data()[c2.data().len() - 10..]
-        // );
         assert_close(&c.data(), &c2.data());
-        // let core_ids = core_affinity::get_core_ids().unwrap();
-        // println!("Core ids {core_ids:?}");
-        // assert!(false);
     }
 
     pub fn assert_close(a: &[f32], b: &[f32]) {

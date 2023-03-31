@@ -48,7 +48,7 @@ macro_rules! GGML_F32_VEC_REDUCE {
     };
 }
 
-pub unsafe fn vec_dot(a_row: *const f32, b_row: *const f32, c: *mut f32, k: usize) {
+pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: usize) {
     let np = k & !(GGML_F32_STEP - 1);
 
     let mut sum = [GGML_F32_VEC_ZERO!(); GGML_F32_ARR];
@@ -63,15 +63,6 @@ pub unsafe fn vec_dot(a_row: *const f32, b_row: *const f32, c: *mut f32, k: usiz
             sum[j] = GGML_F32_VEC_FMA!(sum[j], ax[j], ay[j]);
         }
     }
-
-    // for i in (0..np).step_by(GGML_F32_STEP) {
-    //     for j in 0..GGML_F32_ARR {
-    //         ax[j] = GGML_F32_VEC_LOAD!(a_row.offset((i + j * GGML_F32_EPR) as isize));
-    //         ay[j] = GGML_F32_VEC_LOAD!(b_row.offset((i + j * GGML_F32_EPR) as isize));
-
-    //         sum[j] = GGML_F32_VEC_FMA!(sum[j], ax[j], ay[j]);
-    //     }
-    // }
 
     GGML_F32_VEC_REDUCE!(*c, sum);
 

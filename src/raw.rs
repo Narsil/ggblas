@@ -1,4 +1,4 @@
-use crate::ggml::vec_dot;
+use crate::ggml::vec_dot_f32;
 use threadpool::ThreadPool;
 
 pub unsafe fn ggml_compute_forward_mul_mat(
@@ -44,7 +44,7 @@ pub unsafe fn ggml_compute_forward_mul_mat(
                         let a_row = ap.offset(a_start as isize);
                         let b_row = bp.offset(b_start as isize);
                         let c_ptr = cp.offset(c_start as isize);
-                        vec_dot(a_row, b_row, c_ptr, k);
+                        vec_dot_f32(a_row, b_row, c_ptr, k);
                     }
                 });
             });
@@ -63,7 +63,7 @@ pub unsafe fn ggml_compute_forward_mul_mat(
                 let a_row = ap.offset(a_start as isize);
                 let b_row = bp.offset(b_start as isize);
                 let c_ptr = cp.offset(c_start as isize);
-                vec_dot(a_row, b_row, c_ptr, k);
+                vec_dot_f32(a_row, b_row, c_ptr, k);
             }
         });
     }

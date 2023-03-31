@@ -16,35 +16,32 @@ macro_rules! GGML_F32_VEC_ZERO {
 
 macro_rules! GGML_F32_VEC_LOAD {
     ($e:expr) => {
-	vld1q_f32($e)
+        vld1q_f32($e)
     };
 }
 
 macro_rules! GGML_F32_VEC_FMA {
     ($a:expr, $b:expr, $c:expr) => {
-	vfmaq_f32($a, $b, $c)
+        vfmaq_f32($a, $b, $c)
     };
 }
 
-#[cfg(target_arch="aarch64")]
-macro_rules! GGML_F32x4_REDUCE_ONE{
-	($x:expr) => {
-		vaddvq_f32($x)
-			
-	}
+#[cfg(target_arch = "aarch64")]
+macro_rules! GGML_F32x4_REDUCE_ONE {
+    ($x:expr) => {
+        vaddvq_f32($x)
+    };
 }
 
-#[cfg(target_arch="arm")]
-macro_rules! GGML_F32x4_REDUCE_ONE{
-	($x:expr) => {
-
-    vgetq_lane_f32($x, 0) +          
-     vgetq_lane_f32($x, 1) +          
-     vgetq_lane_f32($x, 2) +          
-     vgetq_lane_f32($x, 3)
+#[cfg(target_arch = "arm")]
+macro_rules! GGML_F32x4_REDUCE_ONE {
+    ($x:expr) => {
+        vgetq_lane_f32($x, 0)
+            + vgetq_lane_f32($x, 1)
+            + vgetq_lane_f32($x, 2)
+            + vgetq_lane_f32($x, 3)
+    };
 }
-			
-	}
 
 macro_rules! GGML_F32_VEC_REDUCE {
     ($res:expr, $x:expr) => {

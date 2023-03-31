@@ -6,11 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libc = { version = "0.2", default-features = false }
-cblas-sys = { version = "0.1.4", default-features = false }
+libc = { version = "0.2", default-features = false, optional = true }
+cblas-sys = { version = "0.1.4", default-features = false, optional= true }
 threadpool = "1.8.1"
+
+[dev-dependencies]
 num_cpus = "1.15.0"
 
 [features]
 default = []
-intel-mkl = []
+intel-mkl = ["dep:cblas-sys", "dep:libc"]
+cblas = ["dep:cblas-sys", "dep:libc"]

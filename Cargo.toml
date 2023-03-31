@@ -12,5 +12,5 @@ threadpool = "1.8.1"
 num_cpus = "1.15.0"
 
 [features]
-default = ["intel-mkl"]
+default = []
 intel-mkl = []

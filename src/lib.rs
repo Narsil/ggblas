@@ -1,9 +1,11 @@
+mod ggml;
 mod raw;
 use cblas_sys::{
     cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
     CblasRowMajor as RowMajor, CblasTrans as Tr,
 };
 use raw::ggml_compute_forward_mul_mat;
+use threadpool::ThreadPool;
 
 pub struct Tensor {
     pub shape: Vec<usize>,
@@ -11,13 +13,13 @@ pub struct Tensor {
 }
 
 impl Tensor {
-    fn shape(&self) -> &[usize] {
+    pub fn shape(&self) -> &[usize] {
         &self.shape
     }
-    fn data(&self) -> &[f32] {
+    pub fn data(&self) -> &[f32] {
         &self.data
     }
-    fn data_mut(&mut self) -> &mut [f32] {
+    pub fn data_mut(&mut self) -> &mut [f32] {
         &mut self.data
     }
 }
@@ -134,6 +136,7 @@ pub fn ggml_matmul<const TRANSPOSE: bool>(
     a: &Tensor,
     b: &Tensor,
     c: &mut Tensor,
+    pool: &ThreadPool,
 ) -> Result<(), Error> {
     let dim = a.shape().len();
 
@@ -184,96 +187,21 @@ pub fn ggml_matmul<const TRANSPOSE: bool>(
     let b_skip: usize = n * k;
     let c_skip: usize = m * n;
 
-    let ar = k as isize;
-    let ac = 1;
-    let (br, bc) = if TRANSPOSE {
-        (1, b.shape()[dim - 1] as isize)
-    } else {
-        (b.shape()[dim - 1] as isize, 1)
-    };
-    let cr = n as isize;
-    let cc = 1;
-
-    (0..batching).for_each(|step| {
-        let ap = &a.data()[step * a_skip..];
-        let bp = &b.data()[step * b_skip..];
-        let cp = &mut c.data_mut()[step * c_skip..];
-
-        let mut w = vec![0.0; 18432];
-
-        let params = ggml_raw::ggml_compute_params {
-            type_: ggml_raw::ggml_task_type::GGML_TASK_COMPUTE,
-            ith: 0,
-            nth: 1,
-            wsize: w.len() * std::mem::size_of::<f32>(),
-            wdata: w.as_mut_ptr() as *mut libc::c_void,
-        };
-        let a_tensor = ggml_raw::ggml_tensor {
-            type_: ggml_raw::GGML_TYPE_F32,
-            n_dims: 4,
-            ne: [768, 2340, 1, 1],
-            nb: [9216, 4, 7077888, 7077888],
-            op: ggml_raw::GGML_OP_MUL_MAT,
-            is_param: false,
-            grad: std::ptr::null_mut(),
-            src0: std::ptr::null_mut(),
-            src1: std::ptr::null_mut(),
-            opt: [std::ptr::null_mut(); 4],
-            n_tasks: 1,
-            perf_runs: 0,
-            perf_cycles: 0,
-            perf_time_us: 0,
-            data: ap.as_ptr() as *mut libc::c_void,
-            padding: [0; 8],
-        };
-        let b_tensor = ggml_raw::ggml_tensor {
-            type_: ggml_raw::GGML_TYPE_F32,
-            n_dims: 4,
-            ne: [768, 6, 1, 1],
-            nb: [4, 3072, 18432, 18432],
-            op: ggml_raw::GGML_OP_MUL_MAT,
-            is_param: false,
-            grad: std::ptr::null_mut(),
-            src0: std::ptr::null_mut(),
-            src1: std::ptr::null_mut(),
-            opt: [std::ptr::null_mut(); 4],
-            n_tasks: 1,
-            perf_runs: 0,
-            perf_cycles: 0,
-            perf_time_us: 0,
-            data: bp.as_ptr() as *mut libc::c_void,
-            padding: [0; 8],
-        };
-        let mut c_tensor = ggml_raw::ggml_tensor {
-            type_: ggml_raw::GGML_TYPE_F32,
-            n_dims: 4,
-            ne: [2304, 6, 1, 1],
-            nb: [4, 9216, 55296, 55296],
-            op: ggml_raw::GGML_OP_MUL_MAT,
-            is_param: false,
-            grad: std::ptr::null_mut(),
-            src0: std::ptr::null_mut(),
-            src1: std::ptr::null_mut(),
-            opt: [std::ptr::null_mut(); 4],
-            n_tasks: 1,
-            perf_runs: 0,
-            perf_cycles: 0,
-            perf_time_us: 0,
-            data: cp.as_ptr() as *mut libc::c_void,
-            padding: [0; 8],
-        };
-
-        unsafe {
-            // ggml_raw::ggml_soft_max(std::ptr::null_mut(), std::ptr::null_mut());
-            // ggml_raw::ggml_compute_forward_mul_mat(
-            ggml_compute_forward_mul_mat(
-                &params as *const ggml_raw::ggml_compute_params,
-                &a_tensor as *const ggml_raw::ggml_tensor,
-                &b_tensor as *const ggml_raw::ggml_tensor,
-                &mut c_tensor as *mut ggml_raw::ggml_tensor,
-            );
-        }
-    });
+    unsafe {
+        ggml_compute_forward_mul_mat(
+            a.data(),
+            a_skip,
+            b.data(),
+            b_skip,
+            c.data_mut(),
+            c_skip,
+            m,
+            n,
+            k,
+            batching,
+            pool,
+        );
+    }
     Ok(())
 }
 #[cfg(test)]
@@ -281,23 +209,93 @@ mod tests {
     use super::*;
 
     #[test]
-    fn ggml() {
+    fn ggml_simple() {
+        let m = 3;
+        let n = 2;
+        let k = 4;
+
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![n, k],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        let pool = ThreadPool::new(num_cpus::get());
+        ggml_matmul::<true>(&a, &b, &mut c, &pool).unwrap();
+
+        assert_eq!(c.data(), [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
+    }
+
+    #[test]
+    fn mkl_simple() {
+        let m = 3;
+        let n = 2;
+        let k = 4;
+
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![n, k],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        matmul::<true>(&a, &b, &mut c).unwrap();
+
+        assert_eq!(c.data(), [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
+    }
+
+    #[test]
+    fn ggml_comparison() {
         let m = 6;
         let n = 768 * 3;
         let k = 768;
 
         let a = Tensor {
             shape: vec![m, k],
-            data: vec![0.0; m * k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
         };
         let b = Tensor {
             shape: vec![n, k],
-            data: vec![0.0; n * k],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
         };
         let mut c = Tensor {
             shape: vec![m, n],
             data: vec![0.0; m * n],
         };
-        ggml_matmul::<true>(&a, &b, &mut c).unwrap();
+        let mut c2 = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        let pool = ThreadPool::new(num_cpus::get());
+        matmul::<true>(&a, &b, &mut c).unwrap();
+        ggml_matmul::<true>(&a, &b, &mut c2, &pool).unwrap();
+        // assert_eq!(c.data()[..10], c2.data()[..10]);
+        // assert_eq!(
+        //     c.data()[c.data().len() - 10..],
+        //     c2.data()[c2.data().len() - 10..]
+        // );
+        assert_close(&c.data(), &c2.data());
+        // let core_ids = core_affinity::get_core_ids().unwrap();
+        // println!("Core ids {core_ids:?}");
+        // assert!(false);
+    }
+
+    pub fn assert_close(a: &[f32], b: &[f32]) {
+        a.iter().zip(b.iter()).for_each(|(&a, &b)| {
+            if ((a - b) / a).abs() > 1e-5 {
+                panic!("{a:?} != {b:?}");
+            }
+        });
     }
 }

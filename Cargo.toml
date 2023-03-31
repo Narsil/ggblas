@@ -8,7 +8,8 @@ edition = "2021"
 [dependencies]
 libc = { version = "0.2", default-features = false }
 cblas-sys = { version = "0.1.4", default-features = false }
-ggml-raw = { path = "../llama-rs/ggml-raw" }
+threadpool = "1.8.1"
+num_cpus = "1.15.0"
 
 [features]
 default = ["intel-mkl"]

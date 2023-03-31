@@ -2,47 +2,45 @@
 
 extern crate test;
 use test::{black_box, Bencher};
+use threadpool::ThreadPool;
 
 use rblas::{ggml_matmul, matmul, Tensor};
 
+const M: usize = 6;
+const N: usize = 768 * 3;
+const K: usize = 768;
+
 #[bench]
 fn bench_mkl(bench: &mut Bencher) {
-    let m = 6;
-    let n = 768 * 3;
-    let k = 768;
-
     let a = Tensor {
-        shape: vec![m, k],
-        data: vec![0.0; m * k],
+        shape: vec![M, K],
+        data: vec![0.0; M * K],
     };
     let b = Tensor {
-        shape: vec![n, k],
-        data: vec![0.0; n * k],
+        shape: vec![N, K],
+        data: vec![0.0; N * K],
     };
     let mut c = Tensor {
-        shape: vec![m, n],
-        data: vec![0.0; m * n],
+        shape: vec![M, N],
+        data: vec![0.0; M * N],
     };
     bench.iter(|| black_box(matmul::<true>(&a, &b, &mut c)));
 }
 
 #[bench]
 fn bench_ggml(bench: &mut Bencher) {
-    let m = 6;
-    let n = 768 * 3;
-    let k = 768;
-
+    let pool = ThreadPool::new(num_cpus::get());
     let a = Tensor {
-        shape: vec![m, k],
-        data: vec![0.0; m * k],
+        shape: vec![M, K],
+        data: vec![0.0; M * K],
     };
     let b = Tensor {
-        shape: vec![n, k],
-        data: vec![0.0; n * k],
+        shape: vec![N, K],
+        data: vec![0.0; N * K],
     };
     let mut c = Tensor {
-        shape: vec![m, n],
-        data: vec![0.0; m * n],
+        shape: vec![M, N],
+        data: vec![0.0; M * N],
     };
-    bench.iter(|| black_box(ggml_matmul::<true>(&a, &b, &mut c)));
+    bench.iter(|| black_box(ggml_matmul::<true>(&a, &b, &mut c, &pool)));
 }

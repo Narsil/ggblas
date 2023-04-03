@@ -13,12 +13,12 @@ const ARR: usize = STEP / EPR;
 
 impl CurrentCpu {
     #[cfg(target_arch = "aarch64")]
-    fn reduce_one(x: float32x4_t) -> f32 {
+    unsafe fn reduce_one(x: float32x4_t) -> f32 {
         vaddvq_f32(x)
     }
 
     #[cfg(target_arch = "arm")]
-    fn reduce_one(x: float32x4_t) -> f32 {
+    unsafe fn reduce_one(x: float32x4_t) -> f32 {
         vgetq_lane_f32(x, 0) + vgetq_lane_f32(x, 1) + vgetq_lane_f32(x, 2) + vgetq_lane_f32(x, 3)
     }
 }

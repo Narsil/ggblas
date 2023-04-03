@@ -1,3 +1,4 @@
+use super::Cpu;
 #[cfg(target_arch = "arm")]
 use core::arch::arm::*;
 

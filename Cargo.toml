@@ -9,6 +9,7 @@ edition = "2021"
 libc = { version = "0.2", default-features = false, optional = true }
 cblas-sys = { version = "0.1.4", default-features = false, optional= true }
 threadpool = "1.8.1"
+fast-math = "0.1.1"
 
 [dev-dependencies]
 num_cpus = "1.15.0"

@@ -14,7 +14,7 @@ impl Handle {
         Self { pool }
     }
 
-    pub unsafe fn batched_sgemm(
+    pub unsafe fn batched_sgemm_t(
         &self,
         ap: &[f32],
         a_skip: usize,

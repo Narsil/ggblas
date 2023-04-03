@@ -38,6 +38,10 @@ impl Cpu<ARR> for CurrentCpu {
         vdupq_n_f32(0.0)
     }
 
+    unsafe fn from_f32(x: f32) -> Self::Unit {
+        vdupq_n_f32(x)
+    }
+
     unsafe fn zero_array() -> Self::Array {
         [Self::zero(); ARR]
     }
@@ -48,6 +52,10 @@ impl Cpu<ARR> for CurrentCpu {
 
     unsafe fn vec_fma(a: Self::Unit, b: Self::Unit, c: Self::Unit) -> Self::Unit {
         vfmaq_f32(a, b, c)
+    }
+
+    unsafe fn vec_store(mem_addr: *mut f32, a: Self::Unit) {
+        vst1q_f32(mem_addr, a);
     }
 
     unsafe fn vec_reduce(mut x: Self::Array, y: *mut f32) {

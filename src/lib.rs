@@ -1,7 +1,7 @@
 mod ggml;
 mod raw;
 
-use raw::ggml_compute_forward_mul_mat;
+use raw::{ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t};
 use threadpool::ThreadPool;
 
 pub struct Handle {
@@ -15,6 +15,23 @@ impl Handle {
     }
 
     pub unsafe fn batched_sgemm_t(
+        &self,
+        ap: &[f32],
+        a_skip: usize,
+        bp: &[f32],
+        b_skip: usize,
+        cp: &mut [f32],
+        c_skip: usize,
+        m: usize,
+        n: usize,
+        k: usize,
+        batching: usize,
+    ) {
+        ggml_compute_forward_mul_mat_t(
+            ap, a_skip, bp, b_skip, cp, c_skip, m, n, k, batching, &self.pool,
+        );
+    }
+    pub unsafe fn batched_sgemm(
         &self,
         ap: &[f32],
         a_skip: usize,
@@ -227,35 +244,45 @@ pub mod tests {
         let b_skip: usize = n * k;
         let c_skip: usize = m * n;
 
-        // unsafe {
-        //     ggml_compute_forward_mul_mat(
-        //         a.data(),
-        //         a_skip,
-        //         b.data(),
-        //         b_skip,
-        //         c.data_mut(),
-        //         c_skip,
-        //         m,
-        //         n,
-        //         k,
-        //         batching,
-        //         pool,
-        //     );
-        // }
-        (0..batching).for_each(|step| {
-            let ap = &a.data()[step * a_skip..];
-            let bp = &b.data()[step * b_skip..];
-            let cp = &mut c.data_mut()[step * c_skip..];
+        if TRANSPOSE {
             unsafe {
-                ggml_compute_forward_mul_mat(ap, a_skip, bp, b_skip, cp, c_skip, m, n, k, 1, pool);
+                ggml_compute_forward_mul_mat_t(
+                    a.data(),
+                    a_skip,
+                    b.data(),
+                    b_skip,
+                    c.data_mut(),
+                    c_skip,
+                    m,
+                    n,
+                    k,
+                    batching,
+                    pool,
+                );
             }
-        });
+        } else {
+            unsafe {
+                ggml_compute_forward_mul_mat(
+                    a.data(),
+                    a_skip,
+                    b.data(),
+                    b_skip,
+                    c.data_mut(),
+                    c_skip,
+                    m,
+                    n,
+                    k,
+                    batching,
+                    pool,
+                );
+            }
+        }
 
         Ok(())
     }
 
     #[test]
-    fn ggml_simple() {
+    fn ggml_simple_t() {
         let m = 3;
         let n = 2;
         let k = 4;
@@ -276,6 +303,30 @@ pub mod tests {
         ggml_matmul::<true>(&a, &b, &mut c, &pool).unwrap();
 
         assert_eq!(c.data(), [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
+    }
+
+    #[test]
+    fn ggml_simple() {
+        let m = 3;
+        let n = 2;
+        let k = 4;
+
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![k, n],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        let pool = ThreadPool::new(1);
+        ggml_matmul::<false>(&a, &b, &mut c, &pool).unwrap();
+
+        assert_eq!(c.data(), [50., 60., 114., 140., 178., 220.]);
     }
 
     #[test]
@@ -304,7 +355,7 @@ pub mod tests {
 
     #[test]
     #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
-    fn ggml_comparison() {
+    fn ggml_comparison_t() {
         let m = 6;
         let n = 768 * 3;
         let k = 768;
@@ -328,6 +379,35 @@ pub mod tests {
         let pool = ThreadPool::new(1);
         matmul::<true>(&a, &b, &mut c).unwrap();
         ggml_matmul::<true>(&a, &b, &mut c2, &pool).unwrap();
+        assert_close(&c.data(), &c2.data());
+    }
+
+    #[test]
+    #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
+    fn ggml_comparison() {
+        let m = 6;
+        let n = 768 * 3;
+        let k = 768;
+
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![k, n],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        let mut c2 = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        let pool = ThreadPool::new(1);
+        matmul::<false>(&a, &b, &mut c).unwrap();
+        ggml_matmul::<false>(&a, &b, &mut c2, &pool).unwrap();
         assert_close(&c.data(), &c2.data());
     }
 

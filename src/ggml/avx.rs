@@ -1,11 +1,8 @@
 use super::Cpu;
 #[cfg(target_arch = "x86")]
-use std::arch::x86::{__m256, _mm256_add_ps, _mm256_loadu_ps, _mm256_mul_ps, _mm256_setzero_ps};
+use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::{
-    __m256, _mm256_add_ps, _mm256_castps256_ps128, _mm256_extractf128_ps, _mm256_loadu_ps,
-    _mm256_mul_ps, _mm256_setzero_ps, _mm_add_ps, _mm_cvtss_f32, _mm_hadd_ps,
-};
+use std::arch::x86_64::*;
 
 pub struct CurrentCpu {}
 
@@ -32,12 +29,20 @@ impl Cpu<ARR> for CurrentCpu {
         [Self::zero(); ARR]
     }
 
+    unsafe fn from_f32(v: f32) -> Self::Unit {
+        _mm256_set1_ps(v)
+    }
+
     unsafe fn load(mem_addr: *const f32) -> Self::Unit {
         _mm256_loadu_ps(mem_addr)
     }
 
     unsafe fn vec_fma(a: Self::Unit, b: Self::Unit, c: Self::Unit) -> Self::Unit {
         _mm256_add_ps(_mm256_mul_ps(b, c), a)
+    }
+
+    unsafe fn vec_store(mem_addr: *mut f32, a: Self::Unit) {
+        _mm256_storeu_ps(mem_addr, a);
     }
 
     unsafe fn vec_reduce(mut x: Self::Array, y: *mut f32) {

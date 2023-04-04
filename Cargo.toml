@@ -11,6 +11,7 @@ cblas-sys = { version = "0.1.4", default-features = false, optional= true }
 threadpool = "1.8.1"
 fast-math = "0.1.1"
 num_cpus = "1.15.0"
+core_affinity = "0.8.0"
 
 [dev-dependencies]
 num_cpus = "1.15.0"

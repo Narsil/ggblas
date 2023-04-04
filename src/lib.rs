@@ -10,7 +10,15 @@ static GUARD: Once = Once::new();
 
 unsafe fn get_pool() -> Option<&'static ThreadPool> {
     GUARD.call_once(|| {
-        HANDLE = Some(ThreadPool::new(num_cpus::get()));
+        let pool = ThreadPool::new(num_cpus::get());
+        let core_ids = core_affinity::get_core_ids().unwrap();
+        core_ids.into_iter().for_each(|core_id| {
+            pool.execute(move || {
+                core_affinity::set_for_current(core_id);
+            });
+        });
+
+        HANDLE = Some(pool);
     });
     HANDLE.as_ref()
 }

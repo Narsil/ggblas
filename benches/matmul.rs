@@ -14,7 +14,7 @@ const K: usize = 768;
 
 #[bench]
 #[cfg(feature = "intel-mkl")]
-fn bench_mkl(bench: &mut Bencher) {
+fn bench_mkl_n(bench: &mut Bencher) {
     let a = Tensor {
         shape: vec![M, K],
         data: vec![0.0; M * K],
@@ -32,7 +32,7 @@ fn bench_mkl(bench: &mut Bencher) {
 
 #[bench]
 #[cfg(feature = "cblas")]
-fn bench_blas(bench: &mut Bencher) {
+fn bench_blas_n(bench: &mut Bencher) {
     let a = Tensor {
         shape: vec![M, K],
         data: vec![0.0; M * K],
@@ -49,7 +49,7 @@ fn bench_blas(bench: &mut Bencher) {
 }
 
 #[bench]
-fn bench_ggml(bench: &mut Bencher) {
+fn bench_ggml_n(bench: &mut Bencher) {
     let pool = ThreadPool::new(num_cpus::get());
     let a = Tensor {
         shape: vec![M, K],

@@ -2,52 +2,71 @@ mod ggml;
 mod raw;
 
 use raw::{ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t};
-use threadpool::ThreadPool;
 
-pub struct Handle {
-    pool: ThreadPool,
+use std::sync::Once;
+use threadpool::ThreadPool;
+static mut HANDLE: Option<ThreadPool> = None;
+static GUARD: Once = Once::new();
+
+unsafe fn get_pool() -> Option<&'static ThreadPool> {
+    GUARD.call_once(|| {
+        HANDLE = Some(ThreadPool::new(num_cpus::get()));
+    });
+    HANDLE.as_ref()
 }
 
-impl Handle {
-    pub fn new(n_cpus: usize) -> Self {
-        let pool = ThreadPool::new(n_cpus);
-        Self { pool }
-    }
+pub unsafe fn batched_sgemm_t(
+    ap: &[f32],
+    a_skip: usize,
+    bp: &[f32],
+    b_skip: usize,
+    cp: &mut [f32],
+    c_skip: usize,
+    m: usize,
+    n: usize,
+    k: usize,
+    batching: usize,
+) {
+    ggml_compute_forward_mul_mat_t(
+        ap,
+        a_skip,
+        bp,
+        b_skip,
+        cp,
+        c_skip,
+        m,
+        n,
+        k,
+        batching,
+        &get_pool().unwrap(),
+    );
+}
 
-    pub unsafe fn batched_sgemm_t(
-        &self,
-        ap: &[f32],
-        a_skip: usize,
-        bp: &[f32],
-        b_skip: usize,
-        cp: &mut [f32],
-        c_skip: usize,
-        m: usize,
-        n: usize,
-        k: usize,
-        batching: usize,
-    ) {
-        ggml_compute_forward_mul_mat_t(
-            ap, a_skip, bp, b_skip, cp, c_skip, m, n, k, batching, &self.pool,
-        );
-    }
-    pub unsafe fn batched_sgemm(
-        &self,
-        ap: &[f32],
-        a_skip: usize,
-        bp: &[f32],
-        b_skip: usize,
-        cp: &mut [f32],
-        c_skip: usize,
-        m: usize,
-        n: usize,
-        k: usize,
-        batching: usize,
-    ) {
-        ggml_compute_forward_mul_mat(
-            ap, a_skip, bp, b_skip, cp, c_skip, m, n, k, batching, &self.pool,
-        );
-    }
+pub unsafe fn batched_sgemm(
+    ap: &[f32],
+    a_skip: usize,
+    bp: &[f32],
+    b_skip: usize,
+    cp: &mut [f32],
+    c_skip: usize,
+    m: usize,
+    n: usize,
+    k: usize,
+    batching: usize,
+) {
+    ggml_compute_forward_mul_mat(
+        ap,
+        a_skip,
+        bp,
+        b_skip,
+        cp,
+        c_skip,
+        m,
+        n,
+        k,
+        batching,
+        &get_pool().unwrap(),
+    );
 }
 
 pub mod tests {
@@ -303,6 +322,31 @@ pub mod tests {
         ggml_matmul::<true>(&a, &b, &mut c, &pool).unwrap();
 
         assert_eq!(c.data(), [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
+    }
+
+    #[test]
+    fn ggml_simple2() {
+        let m = 2;
+        let n = 2;
+        let k = 2;
+
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![k, n],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        unsafe {
+            batched_sgemm(a.data(), 1, b.data(), 1, c.data_mut(), 1, m, n, k, 1);
+        }
+
+        assert_eq!(c.data(), [7., 10., 15., 22.]);
     }
 
     #[test]

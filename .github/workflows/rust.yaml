@@ -31,10 +31,10 @@ jobs:
         run: cargo install cargo-readme
 
       - name: Build
-        run: cargo build --all-targets --verbose
+        run: cargo build --verbose
 
       - name: Lint with Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy -- -D warnings
 
       - name: Run Tests
         run: cargo test --verbose

@@ -5,7 +5,7 @@
 //! with the physical number of cores each thread being pinned to their respective
 //! counterpart.
 //!
-//! Current performance can be see [HERE](TODO)
+//! Current performance can be see [here](https://nodata.dev/ggblas/dev/bench/)
 mod ggml;
 mod raw;
 use raw::{ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t};

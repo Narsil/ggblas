@@ -40,9 +40,9 @@ pub unsafe fn ggml_compute_forward_mul_mat(
                     let ap = ap as *const f32;
                     let bp = bp as *const f32;
                     let cp = cp as *mut f32;
-                    let av = *ap.offset(a_start as isize);
-                    let b_row = bp.offset(b_start as isize);
-                    let c_row = cp.offset(c_start as isize);
+                    let av = *ap.add(a_start);
+                    let b_row = bp.add(b_start);
+                    let c_row = cp.add(c_start);
                     vec_mad_f32(b_row, c_row, av, n);
                 }
             });
@@ -90,9 +90,9 @@ pub unsafe fn ggml_compute_forward_mul_mat_t(
                     let ap = ap as *const f32;
                     let bp = bp as *const f32;
                     let cp = cp as *mut f32;
-                    let a_row = ap.offset(a_start as isize);
-                    let b_row = bp.offset(b_start as isize);
-                    let c_ptr = cp.offset(c_start as isize);
+                    let a_row = ap.add(a_start);
+                    let b_row = bp.add(b_start);
+                    let c_ptr = cp.add(c_start);
                     vec_dot_f32(a_row, b_row, c_ptr, k);
                 }
             });

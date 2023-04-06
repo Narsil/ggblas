@@ -55,7 +55,7 @@ pub fn batched_sgemm_t(
             n,
             k,
             batching,
-            &get_pool().unwrap(),
+            get_pool().unwrap(),
         );
     }
 }
@@ -84,7 +84,7 @@ pub fn batched_sgemm(
             n,
             k,
             batching,
-            &get_pool().unwrap(),
+            get_pool().unwrap(),
         );
     }
 }
@@ -268,7 +268,7 @@ pub mod tests {
             shape: vec![m, n],
             data: vec![0.0; m * n],
         };
-        batched_sgemm_t(a.data(), 1, &b.data(), 1, c.data_mut(), 1, m, n, k, 1);
+        batched_sgemm_t(a.data(), 1, b.data(), 1, c.data_mut(), 1, m, n, k, 1);
 
         assert_eq!(c.data(), [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
     }
@@ -314,7 +314,7 @@ pub mod tests {
             shape: vec![m, n],
             data: vec![0.0; m * n],
         };
-        batched_sgemm(a.data(), 1, &b.data(), 1, c.data_mut(), 1, m, n, k, 1);
+        batched_sgemm(a.data(), 1, b.data(), 1, c.data_mut(), 1, m, n, k, 1);
 
         assert_eq!(c.data(), [50., 60., 114., 140., 178., 220.]);
     }

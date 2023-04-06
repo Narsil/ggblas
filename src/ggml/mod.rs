@@ -38,8 +38,8 @@ pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: 
 
     for i in (0..np).step_by(CurrentCpu::STEP) {
         for j in 0..CurrentCpu::n() {
-            ax[j] = CurrentCpu::load(a_row.offset((i + j * CurrentCpu::EPR) as isize));
-            ay[j] = CurrentCpu::load(b_row.offset((i + j * CurrentCpu::EPR) as isize));
+            ax[j] = CurrentCpu::load(a_row.add(i + j * CurrentCpu::EPR));
+            ay[j] = CurrentCpu::load(b_row.add(i + j * CurrentCpu::EPR));
 
             sum[j] = CurrentCpu::vec_fma(sum[j], ax[j], ay[j]);
         }
@@ -49,7 +49,7 @@ pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: 
 
     // leftovers
     for i in np..k {
-        *c += *a_row.offset(i as isize) * (*b_row.offset(i as isize));
+        *c += *a_row.add(i) * (*b_row.add(i));
     }
 }
 
@@ -63,16 +63,16 @@ pub unsafe fn vec_mad_f32(b_row: *const f32, c_row: *mut f32, v: f32, n: usize) 
 
     for i in (0..np).step_by(CurrentCpu::STEP) {
         for j in 0..CurrentCpu::n() {
-            ax[j] = CurrentCpu::load(b_row.offset((i + j * CurrentCpu::EPR) as isize));
-            ay[j] = CurrentCpu::load(c_row.offset((i + j * CurrentCpu::EPR) as isize));
+            ax[j] = CurrentCpu::load(b_row.add(i + j * CurrentCpu::EPR));
+            ay[j] = CurrentCpu::load(c_row.add(i + j * CurrentCpu::EPR));
             ay[j] = CurrentCpu::vec_fma(ay[j], ax[j], vx);
-            CurrentCpu::vec_store(c_row.offset((i + j * CurrentCpu::EPR) as isize), ay[j]);
+            CurrentCpu::vec_store(c_row.add(i + j * CurrentCpu::EPR), ay[j]);
         }
     }
 
     // leftovers
     for i in np..n {
-        *c_row.offset(i as isize) += *b_row.offset(i as isize) * v;
+        *c_row.add(i) += *b_row.add(i) * v;
     }
 }
 
@@ -80,13 +80,13 @@ pub unsafe fn vec_mad_f32(b_row: *const f32, c_row: *mut f32, v: f32, n: usize) 
 pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: usize) {
     // leftovers
     for i in 0..k {
-        *c += *a_row.offset(i as isize) * (*b_row.offset(i as isize));
+        *c += *a_row.add(i as isize) * (*b_row.add(i));
     }
 }
 
 #[cfg(not(any(target_feature = "neon", target_feature = "avx")))]
 pub unsafe fn vec_mad_f32(a_row: *const f32, c_row: *mut f32, v: f32, n: usize) {
     for i in 0..n {
-        *c_row.offset(i as isize) += *a_row.offset(i as isize) * v;
+        *c_row.add(i) += *a_row.add(i) * v;
     }
 }

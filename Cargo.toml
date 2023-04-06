@@ -10,7 +10,7 @@ keywords = ["blas", "ml", "ggml", "avx", "neon"]
 readme = "./README.md"
 description = """
 Matrix multiplicatiosn in simple pure rust multithreadded blas-like interface.
-Exploits intrinsics.
+Exploits intrinsics on available targets.
 """
 exclude = [ "rust-toolchain", "target/*", "Cargo.lock"]
 

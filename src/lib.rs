@@ -1,3 +1,11 @@
+//! ggblas is a library aimed to provide a simple and ergonomic access
+//! to the matrixmuliplication implemented in [ggml](https://github.com/ggerganov/llama.cpp/)
+//!
+//! This library adds on top a [threadpool](https://docs.rs/threadpool/latest/threadpool/)
+//! with the physical number of cores each thread being pinned to their respective
+//! counterpart.
+//!
+//! Current performance can be see [HERE](TODO)
 mod ggml;
 mod raw;
 use raw::{ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t};
@@ -82,6 +90,7 @@ pub fn batched_sgemm(
 }
 
 pub mod tests {
+    #[cfg(test)]
     use super::*;
 
     #[cfg(any(feature = "cblas", feature = "intel-mkl"))]

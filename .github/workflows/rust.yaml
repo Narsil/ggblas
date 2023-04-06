@@ -2,6 +2,10 @@ name: Rust
 
 on:
   pull_request:
+  # TODO Remove this once I protect main branch.
+  push:
+    branch:
+      main
 
 jobs:
   build:

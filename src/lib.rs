@@ -1,16 +1,16 @@
 mod ggml;
 mod raw;
-
 use raw::{ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t};
 
 use std::sync::Once;
 use threadpool::ThreadPool;
+
 static mut HANDLE: Option<ThreadPool> = None;
 static GUARD: Once = Once::new();
 
 unsafe fn get_pool() -> Option<&'static ThreadPool> {
     GUARD.call_once(|| {
-        let pool = ThreadPool::new(num_cpus::get());
+        let pool = ThreadPool::new(num_cpus::get_physical());
         let core_ids = core_affinity::get_core_ids().unwrap();
         core_ids.into_iter().for_each(|core_id| {
             pool.execute(move || {
@@ -23,7 +23,7 @@ unsafe fn get_pool() -> Option<&'static ThreadPool> {
     HANDLE.as_ref()
 }
 
-pub unsafe fn batched_sgemm_t(
+pub fn batched_sgemm_t(
     ap: &[f32],
     a_skip: usize,
     bp: &[f32],
@@ -35,22 +35,24 @@ pub unsafe fn batched_sgemm_t(
     k: usize,
     batching: usize,
 ) {
-    ggml_compute_forward_mul_mat_t(
-        ap,
-        a_skip,
-        bp,
-        b_skip,
-        cp,
-        c_skip,
-        m,
-        n,
-        k,
-        batching,
-        &get_pool().unwrap(),
-    );
+    unsafe {
+        ggml_compute_forward_mul_mat_t(
+            ap,
+            a_skip,
+            bp,
+            b_skip,
+            cp,
+            c_skip,
+            m,
+            n,
+            k,
+            batching,
+            &get_pool().unwrap(),
+        );
+    }
 }
 
-pub unsafe fn batched_sgemm(
+pub fn batched_sgemm(
     ap: &[f32],
     a_skip: usize,
     bp: &[f32],
@@ -62,19 +64,21 @@ pub unsafe fn batched_sgemm(
     k: usize,
     batching: usize,
 ) {
-    ggml_compute_forward_mul_mat(
-        ap,
-        a_skip,
-        bp,
-        b_skip,
-        cp,
-        c_skip,
-        m,
-        n,
-        k,
-        batching,
-        &get_pool().unwrap(),
-    );
+    unsafe {
+        ggml_compute_forward_mul_mat(
+            ap,
+            a_skip,
+            bp,
+            b_skip,
+            cp,
+            c_skip,
+            m,
+            n,
+            k,
+            batching,
+            &get_pool().unwrap(),
+        );
+    }
 }
 
 pub mod tests {
@@ -85,6 +89,8 @@ pub mod tests {
         cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
         CblasRowMajor as RowMajor, CblasTrans as Tr,
     };
+    #[cfg(feature = "matrixmultiply")]
+    use matrixmultiply::sgemm;
 
     pub struct Tensor {
         pub shape: Vec<usize>,
@@ -108,7 +114,7 @@ pub mod tests {
         Dim,
     }
 
-    #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
+    #[cfg(any(feature = "cblas", feature = "intel-mkl", feature = "matrixmultiply"))]
     #[inline]
     pub fn matmul<const TRANSPOSE: bool>(
         a: &Tensor,
@@ -178,7 +184,27 @@ pub mod tests {
             let ap = &a.data()[step * a_skip..];
             let bp = &b.data()[step * b_skip..];
             let cp = &mut c.data_mut()[step * c_skip..];
+            #[cfg(feature = "matrixmultiply")]
+            unsafe {
+                sgemm(
+                    m,
+                    k,
+                    n,
+                    1.0,
+                    ap.as_ptr(),
+                    ar,
+                    ac,
+                    bp.as_ptr(),
+                    br,
+                    bc,
+                    1.0,
+                    cp.as_mut_ptr(),
+                    cr,
+                    cc,
+                );
+            }
 
+            #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
             unsafe {
                 let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
                 let (layout, a_tr, b_tr, lda, ldb, ldc) = if cr < cc {
@@ -215,99 +241,6 @@ pub mod tests {
         Ok(())
     }
 
-    #[inline]
-    pub fn ggml_matmul<const TRANSPOSE: bool>(
-        a: &Tensor,
-        b: &Tensor,
-        c: &mut Tensor,
-        pool: &ThreadPool,
-    ) -> Result<(), Error> {
-        let dim = a.shape().len();
-
-        if dim < 2 {
-            return Err(Error::Dim);
-        }
-        if b.shape().len() != dim {
-            return Err(Error::Dim);
-        }
-        if c.shape().len() != dim {
-            return Err(Error::Dim);
-        }
-
-        let m = a.shape()[dim - 2];
-        let k = a.shape()[dim - 1];
-
-        let mut expected_c = a.shape().to_vec();
-        let mut expected_b = a.shape().to_vec();
-
-        let (expected_b, n) = if TRANSPOSE {
-            let n = b.shape()[dim - 2];
-            expected_b[dim - 2] = n;
-            expected_b[dim - 1] = k;
-            (expected_b, n)
-        } else {
-            let n = b.shape()[dim - 1];
-            expected_b[dim - 2] = k;
-            expected_b[dim - 1] = n;
-            (expected_b, n)
-        };
-
-        expected_c[dim - 2] = m;
-        expected_c[dim - 1] = n;
-
-        if expected_b != b.shape() {
-            return Err(Error::Dim);
-        }
-
-        if expected_c != c.shape() {
-            return Err(Error::Dim);
-        }
-
-        // Zero out c
-        // c.data_mut().iter_mut().for_each(|v| *v = 0.0);
-
-        let batching: usize = a.shape()[..dim - 2].iter().product();
-        let a_skip: usize = m * k;
-        let b_skip: usize = n * k;
-        let c_skip: usize = m * n;
-
-        if TRANSPOSE {
-            unsafe {
-                ggml_compute_forward_mul_mat_t(
-                    a.data(),
-                    a_skip,
-                    b.data(),
-                    b_skip,
-                    c.data_mut(),
-                    c_skip,
-                    m,
-                    n,
-                    k,
-                    batching,
-                    pool,
-                );
-            }
-        } else {
-            unsafe {
-                ggml_compute_forward_mul_mat(
-                    a.data(),
-                    a_skip,
-                    b.data(),
-                    b_skip,
-                    c.data_mut(),
-                    c_skip,
-                    m,
-                    n,
-                    k,
-                    batching,
-                    pool,
-                );
-            }
-        }
-
-        Ok(())
-    }
-
     #[test]
     fn ggml_simple_t() {
         let m = 3;
@@ -326,8 +259,7 @@ pub mod tests {
             shape: vec![m, n],
             data: vec![0.0; m * n],
         };
-        let pool = ThreadPool::new(1);
-        ggml_matmul::<true>(&a, &b, &mut c, &pool).unwrap();
+        batched_sgemm_t(a.data(), 1, &b.data(), 1, c.data_mut(), 1, m, n, k, 1);
 
         assert_eq!(c.data(), [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
     }
@@ -350,9 +282,7 @@ pub mod tests {
             shape: vec![m, n],
             data: vec![0.0; m * n],
         };
-        unsafe {
-            batched_sgemm(a.data(), 1, b.data(), 1, c.data_mut(), 1, m, n, k, 1);
-        }
+        batched_sgemm(a.data(), 1, b.data(), 1, c.data_mut(), 1, m, n, k, 1);
 
         assert_eq!(c.data(), [7., 10., 15., 22.]);
     }
@@ -375,8 +305,7 @@ pub mod tests {
             shape: vec![m, n],
             data: vec![0.0; m * n],
         };
-        let pool = ThreadPool::new(1);
-        ggml_matmul::<false>(&a, &b, &mut c, &pool).unwrap();
+        batched_sgemm(a.data(), 1, &b.data(), 1, c.data_mut(), 1, m, n, k, 1);
 
         assert_eq!(c.data(), [50., 60., 114., 140., 178., 220.]);
     }
@@ -428,9 +357,8 @@ pub mod tests {
             shape: vec![m, n],
             data: vec![0.0; m * n],
         };
-        let pool = ThreadPool::new(1);
         matmul::<true>(&a, &b, &mut c).unwrap();
-        ggml_matmul::<true>(&a, &b, &mut c2, &pool).unwrap();
+        batched_sgemm_t(a.data(), 1, &b.data(), 1, c2.data_mut(), 1, m, n, k, 1);
         assert_close(&c.data(), &c2.data());
     }
 
@@ -457,9 +385,8 @@ pub mod tests {
             shape: vec![m, n],
             data: vec![0.0; m * n],
         };
-        let pool = ThreadPool::new(1);
         matmul::<false>(&a, &b, &mut c).unwrap();
-        ggml_matmul::<false>(&a, &b, &mut c2, &pool).unwrap();
+        batched_sgemm(a.data(), 1, &b.data(), 1, c2.data_mut(), 1, m, n, k, 1);
         assert_close(&c.data(), &c2.data());
     }
 

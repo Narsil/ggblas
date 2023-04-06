@@ -1,7 +1,18 @@
 [package]
-name = "rblas"
+name = "ggblas"
 version = "0.1.0"
 edition = "2021"
+homepage = "https://github.com/Narsil/ggblas"
+repository = "https://github.com/Narsil/ggblas"
+documentation = "https://docs.rs/ggblas/"
+license = "Apache-2.0"
+keywords = ["blas", "ml", "ggml", "avx", "neon"]
+readme = "./README.md"
+description = """
+Matrix multiplicatiosn in simple pure rust multithreadded blas-like interface.
+Exploits intrinsics.
+"""
+exclude = [ "rust-toolchain", "target/*", "Cargo.lock"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,9 +20,9 @@ edition = "2021"
 libc = { version = "0.2", default-features = false, optional = true }
 cblas-sys = { version = "0.1.4", default-features = false, optional= true }
 threadpool = "1.8.1"
-fast-math = "0.1.1"
 num_cpus = "1.15.0"
 core_affinity = "0.8.0"
+matrixmultiply = { version = "0.3.2", features = ["threading"], optional=true }
 
 [dev-dependencies]
 num_cpus = "1.15.0"

@@ -121,7 +121,7 @@ fn bench_matrixmultiply_t(bench: &mut Bencher) {
 }
 
 #[bench]
-fn bench_ggml_t(bench: &mut Bencher) {
+fn bench_ggblas_t(bench: &mut Bencher) {
     let a = Tensor {
         shape: vec![M, K],
         data: vec![0.0; M * K],
@@ -134,23 +134,10 @@ fn bench_ggml_t(bench: &mut Bencher) {
         shape: vec![M, N],
         data: vec![0.0; M * N],
     };
-    bench.iter(|| {
-        black_box(batched_sgemm_t(
-            a.data(),
-            1,
-            b.data(),
-            1,
-            c.data_mut(),
-            1,
-            M,
-            N,
-            K,
-            1,
-        ))
-    });
+    bench.iter(|| black_box(batched_sgemm_t(a.data(), b.data(), c.data_mut(), M, N, K)));
 }
 #[bench]
-fn bench_ggml_n(bench: &mut Bencher) {
+fn bench_ggblas_n(bench: &mut Bencher) {
     let a = Tensor {
         shape: vec![M, K],
         data: vec![0.0; M * K],
@@ -163,18 +150,5 @@ fn bench_ggml_n(bench: &mut Bencher) {
         shape: vec![M, N],
         data: vec![0.0; M * N],
     };
-    bench.iter(|| {
-        black_box(batched_sgemm(
-            a.data(),
-            1,
-            &b.data(),
-            1,
-            c.data_mut(),
-            1,
-            M,
-            N,
-            K,
-            1,
-        ))
-    });
+    bench.iter(|| black_box(batched_sgemm(a.data(), b.data(), c.data_mut(), M, N, K)));
 }

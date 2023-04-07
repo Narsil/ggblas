@@ -80,7 +80,7 @@ pub unsafe fn vec_mad_f32(b_row: *const f32, c_row: *mut f32, v: f32, n: usize) 
 pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: usize) {
     // leftovers
     for i in 0..k {
-        *c += *a_row.add(i as isize) * (*b_row.add(i));
+        *c += *a_row.add(i) * (*b_row.add(i));
     }
 }
 

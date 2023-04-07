@@ -14,12 +14,20 @@
 //! let b = vec![1., 2., 3., 4.];
 //! let mut c = vec![0., 0., 0., 0.];
 //!
+//! // Simple (2, 2) x (2, 2)
 //! batched_sgemm(&a, &b, &mut c, 2, 2, 2);
 //! assert_eq!(c, &[7., 10., 15., 22.]);
 //!
+//! // Different shape (1, 4), (4, 1)
 //! let mut c = vec![0.];
 //! batched_sgemm(&a, &b, &mut c, 1, 1, 4);
 //! assert_eq!(c, &[30.]);
+//!
+//! // batched  (2, 2, 1), (2, 1, 2)
+//! // batching is done implicitly
+//! let mut c = vec![0., 0., 0., 0., 0., 0., 0., 0.];
+//! batched_sgemm(&a, &b, &mut c, 2, 2, 1);
+//! assert_eq!(c, &[1.0, 2.0, 2.0, 4.0, 9.0, 12.0, 12.0, 16.0]);
 //! ```
 //!
 //! # Performance
@@ -82,6 +90,30 @@ unsafe fn get_pool() -> Option<&'static ThreadPool> {
     HANDLE.as_ref()
 }
 
+/// Computes batched matrixmultiplication
+///
+/// ```latex
+/// C = A * B.T
+/// ```
+///
+/// The buffers are expected in row major.
+/// The function will infer the batching based on `m`, `n` and `k`
+/// and the size of the slices.
+///
+/// The sizes are **not** thoroughly checked, and the function will
+/// panic if sizes don't match.
+///
+/// ```
+/// use ggblas::batched_sgemm_t;
+///
+/// let a = vec![1., 2., 3., 4.];
+/// let b = vec![1., 2., 3., 4.];
+/// let mut c = vec![0., 0., 0., 0.];
+///
+/// // Simple (2, 2) x (2, 2)
+/// batched_sgemm_t(&a, &b, &mut c, 2, 2, 2);
+/// assert_eq!(c, &[5., 11., 11., 25.]);
+/// ```
 pub fn batched_sgemm_t(ap: &[f32], bp: &[f32], cp: &mut [f32], m: usize, n: usize, k: usize) {
     let a_skip = m * k;
     let b_skip = k * n;
@@ -106,6 +138,30 @@ pub fn batched_sgemm_t(ap: &[f32], bp: &[f32], cp: &mut [f32], m: usize, n: usiz
     }
 }
 
+/// Computes batched matrixmultiplication
+///
+/// ```latex
+/// C = A * B
+/// ```
+///
+/// The buffers are expected in row major.
+/// The function will infer the batching based on `m`, `n` and `k`
+/// and the size of the slices.
+///
+/// The sizes are **not** thoroughly checked, and the function will
+/// panic if sizes don't match.
+///
+/// ```
+/// use ggblas::batched_sgemm;
+///
+/// let a = vec![1., 2., 3., 4.];
+/// let b = vec![1., 2., 3., 4.];
+/// let mut c = vec![0., 0., 0., 0.];
+///
+/// // Simple (2, 2) x (2, 2)
+/// batched_sgemm(&a, &b, &mut c, 2, 2, 2);
+/// assert_eq!(c, &[7., 10., 15., 22.]);
+/// ```
 pub fn batched_sgemm(ap: &[f32], bp: &[f32], cp: &mut [f32], m: usize, n: usize, k: usize) {
     let a_skip = m * k;
     let b_skip = k * n;

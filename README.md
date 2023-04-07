@@ -20,12 +20,20 @@ let a = vec![1., 2., 3., 4.];
 let b = vec![1., 2., 3., 4.];
 let mut c = vec![0., 0., 0., 0.];
 
+// Simple (2, 2) x (2, 2)
 batched_sgemm(&a, &b, &mut c, 2, 2, 2);
 assert_eq!(c, &[7., 10., 15., 22.]);
 
+// Different shape (1, 4), (4, 1)
 let mut c = vec![0.];
 batched_sgemm(&a, &b, &mut c, 1, 1, 4);
 assert_eq!(c, &[30.]);
+
+// batched  (2, 2, 1), (2, 1, 2)
+// batching is done implicitly
+let mut c = vec![0., 0., 0., 0., 0., 0., 0., 0.];
+batched_sgemm(&a, &b, &mut c, 2, 2, 1);
+assert_eq!(c, &[1.0, 2.0, 2.0, 4.0, 9.0, 12.0, 12.0, 16.0]);
 ```
 
 ## Performance

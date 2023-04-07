@@ -51,12 +51,14 @@ test bench_matrixmultiply_t ... bench:     841,705 ns/iter (+/- 12,706)
 
 ### M1 (neon)
 
+```bash
 test bench_ggml_n           ... bench:     640,552 ns/iter (+/- 21,558)
 test bench_ggml_t           ... bench:     270,919 ns/iter (+/- 10,761)
 test bench_matrixmultiply_n ... bench:     944,152 ns/iter (+/- 38,737)
 test bench_matrixmultiply_t ... bench:     809,709 ns/iter (+/- 13,350)
 test bench_blas_n ... bench:      97,389 ns/iter (+/- 701)
 test bench_blas_t ... bench:     628,720 ns/iter (+/- 87,855)
+```
 
 
 

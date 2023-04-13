@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1680863696751,
+  "lastUpdate": 1681372609911,
   "repoUrl": "https://github.com/Narsil/ggblas",
   "entries": {
     "Rust Benchmark": [
@@ -455,6 +455,54 @@ window.BENCHMARK_DATA = {
             "name": "bench_matrixmultiply_t",
             "value": 1160879,
             "range": "± 116945",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patry.nicolas@protonmail.com",
+            "name": "Nicolas Patry",
+            "username": "Narsil"
+          },
+          "committer": {
+            "email": "patry.nicolas@protonmail.com",
+            "name": "Nicolas Patry",
+            "username": "Narsil"
+          },
+          "distinct": true,
+          "id": "5fd5275bb767e8756b98c21889df73d34d9e373d",
+          "message": "Adding wasm simd support.",
+          "timestamp": "2023-04-13T09:55:17+02:00",
+          "tree_id": "133daef8511baa5a36c36a1cd3e5dcc34b47e3d6",
+          "url": "https://github.com/Narsil/ggblas/commit/5fd5275bb767e8756b98c21889df73d34d9e373d"
+        },
+        "date": 1681372609192,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench_ggblas_n",
+            "value": 727381,
+            "range": "± 21557",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t",
+            "value": 678975,
+            "range": "± 8837",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_n",
+            "value": 1172854,
+            "range": "± 55779",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_t",
+            "value": 1002756,
+            "range": "± 74600",
             "unit": "ns/iter"
           }
         ]

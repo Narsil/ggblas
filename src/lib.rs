@@ -69,12 +69,29 @@ mod ggml;
 mod raw;
 use raw::{ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t};
 
+#[cfg(target_arch = "wasm32")]
+mod wasm_pool;
+#[cfg(target_arch = "wasm32")]
+use wasm_pool::Once;
+#[cfg(target_arch = "wasm32")]
+use wasm_pool::ThreadPool;
+
+#[cfg(target_arch = "wasm32")]
+fn get_pool() -> Option<ThreadPool> {
+    let pool = ThreadPool::new(1);
+    Some(pool)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Once;
+#[cfg(not(target_arch = "wasm32"))]
 use threadpool::ThreadPool;
 
+#[cfg(not(target_arch = "wasm32"))]
 static mut HANDLE: Option<ThreadPool> = None;
+#[cfg(not(target_arch = "wasm32"))]
 static GUARD: Once = Once::new();
-
+#[cfg(not(target_arch = "wasm32"))]
 unsafe fn get_pool() -> Option<&'static ThreadPool> {
     GUARD.call_once(|| {
         let pool = ThreadPool::new(num_cpus::get_physical());
@@ -133,6 +150,9 @@ pub fn batched_sgemm_t(ap: &[f32], bp: &[f32], cp: &mut [f32], m: usize, n: usiz
             n,
             k,
             batching,
+            #[cfg(target_arch = "wasm32")]
+            &get_pool().unwrap(),
+            #[cfg(not(target_arch = "wasm32"))]
             get_pool().unwrap(),
         );
     }
@@ -181,6 +201,9 @@ pub fn batched_sgemm(ap: &[f32], bp: &[f32], cp: &mut [f32], m: usize, n: usize,
             n,
             k,
             batching,
+            #[cfg(target_arch = "wasm32")]
+            &get_pool().unwrap(),
+            #[cfg(not(target_arch = "wasm32"))]
             get_pool().unwrap(),
         );
     }
@@ -464,8 +487,8 @@ pub mod tests {
             data: vec![0.0; m * n],
         };
         matmul::<true>(&a, &b, &mut c).unwrap();
-        batched_sgemm_t(a.data(), 1, &b.data(), 1, c2.data_mut(), 1, m, n, k, 1);
-        assert_close(&c.data(), &c2.data());
+        batched_sgemm_t(a.data(), b.data(), c2.data_mut(), m, n, k);
+        assert_close(c.data(), c2.data());
     }
 
     #[test]
@@ -492,7 +515,7 @@ pub mod tests {
             data: vec![0.0; m * n],
         };
         matmul::<false>(&a, &b, &mut c).unwrap();
-        batched_sgemm(a.data(), 1, &b.data(), 1, c2.data_mut(), 1, m, n, k, 1);
+        batched_sgemm(a.data(), &b.data(), c2.data_mut(), m, n, k);
         assert_close(&c.data(), &c2.data());
     }
 

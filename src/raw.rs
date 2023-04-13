@@ -1,5 +1,6 @@
 use crate::ggml::{vec_dot_f32, vec_mad_f32};
-use threadpool::ThreadPool;
+
+use crate::ThreadPool;
 
 pub unsafe fn ggml_compute_forward_mul_mat(
     ap: &[f32],

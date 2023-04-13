@@ -21,14 +21,18 @@ pub mod avx;
 #[cfg(target_feature = "avx")]
 pub use avx::CurrentCpu;
 
-#[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
-#[cfg(target_feature = "neon")]
-pub mod neon;
-#[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
-#[cfg(target_feature = "neon")]
-pub use neon::CurrentCpu;
+#[cfg(any(target_arch = "wasm32"))]
+#[cfg(target_feature = "simd128")]
+pub mod simd128;
+#[cfg(any(target_arch = "wasm32"))]
+#[cfg(target_feature = "simd128")]
+pub use simd128::CurrentCpu;
 
-#[cfg(any(target_feature = "neon", target_feature = "avx"))]
+#[cfg(any(
+    target_feature = "neon",
+    target_feature = "avx",
+    target_feature = "simd128"
+))]
 pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: usize) {
     let np = k & !(CurrentCpu::STEP - 1);
 
@@ -53,7 +57,11 @@ pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: 
     }
 }
 
-#[cfg(any(target_feature = "neon", target_feature = "avx"))]
+#[cfg(any(
+    target_feature = "neon",
+    target_feature = "avx",
+    target_feature = "simd128"
+))]
 pub unsafe fn vec_mad_f32(b_row: *const f32, c_row: *mut f32, v: f32, n: usize) {
     let np = n & !(CurrentCpu::STEP - 1);
 
@@ -76,7 +84,11 @@ pub unsafe fn vec_mad_f32(b_row: *const f32, c_row: *mut f32, v: f32, n: usize) 
     }
 }
 
-#[cfg(not(any(target_feature = "neon", target_feature = "avx")))]
+#[cfg(not(any(
+    target_feature = "neon",
+    target_feature = "avx",
+    target_feature = "simd128"
+)))]
 pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: usize) {
     // leftovers
     for i in 0..k {
@@ -84,7 +96,11 @@ pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: 
     }
 }
 
-#[cfg(not(any(target_feature = "neon", target_feature = "avx")))]
+#[cfg(not(any(
+    target_feature = "neon",
+    target_feature = "avx",
+    target_feature = "simd128"
+)))]
 pub unsafe fn vec_mad_f32(a_row: *const f32, c_row: *mut f32, v: f32, n: usize) {
     for i in 0..n {
         *c_row.add(i) += *a_row.add(i) * v;

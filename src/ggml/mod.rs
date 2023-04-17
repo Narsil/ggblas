@@ -33,6 +33,7 @@ pub use simd128::CurrentCpu;
     target_feature = "avx",
     target_feature = "simd128"
 ))]
+#[inline(never)]
 pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: usize) {
     let np = k & !(CurrentCpu::STEP - 1);
 
@@ -89,6 +90,7 @@ pub unsafe fn vec_mad_f32(b_row: *const f32, c_row: *mut f32, v: f32, n: usize) 
     target_feature = "avx",
     target_feature = "simd128"
 )))]
+#[inline(never)]
 pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: usize) {
     // leftovers
     for i in 0..k {

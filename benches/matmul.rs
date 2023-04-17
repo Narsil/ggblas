@@ -3,7 +3,12 @@
 extern crate test;
 use test::{black_box, Bencher};
 
-#[cfg(any(feature = "intel-mkl", feature = "cblas", feature = "matrixmultiply"))]
+#[cfg(any(
+    feature = "intel-mkl",
+    feature = "cblas",
+    feature = "matrixmultiply",
+    feature = "faer-rs"
+))]
 use ggblas::tests::matmul;
 use ggblas::tests::Tensor;
 use ggblas::{batched_sgemm, batched_sgemm_t};
@@ -33,6 +38,42 @@ fn bench_mkl_n(bench: &mut Bencher) {
 #[bench]
 #[cfg(feature = "intel-mkl")]
 fn bench_mkl_t(bench: &mut Bencher) {
+    let a = Tensor {
+        shape: vec![M, K],
+        data: vec![0.0; M * K],
+    };
+    let b = Tensor {
+        shape: vec![N, K],
+        data: vec![0.0; N * K],
+    };
+    let mut c = Tensor {
+        shape: vec![M, N],
+        data: vec![0.0; M * N],
+    };
+    bench.iter(|| black_box(matmul::<true>(&a, &b, &mut c)));
+}
+
+#[bench]
+#[cfg(feature = "faer-rs")]
+fn bench_faer_rs_n(bench: &mut Bencher) {
+    let a = Tensor {
+        shape: vec![M, K],
+        data: vec![0.0; M * K],
+    };
+    let b = Tensor {
+        shape: vec![K, N],
+        data: vec![0.0; N * K],
+    };
+    let mut c = Tensor {
+        shape: vec![M, N],
+        data: vec![0.0; M * N],
+    };
+    bench.iter(|| black_box(matmul::<false>(&a, &b, &mut c)));
+}
+
+#[bench]
+#[cfg(feature = "faer-rs")]
+fn bench_faer_rs_t(bench: &mut Bencher) {
     let a = Tensor {
         shape: vec![M, K],
         data: vec![0.0; M * K],

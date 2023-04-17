@@ -218,6 +218,8 @@ pub mod tests {
         cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
         CblasRowMajor as RowMajor, CblasTrans as Tr,
     };
+    #[cfg(feature = "faer-rs")]
+    use faer_core::{mul, Conj, MatMut, MatRef, Parallelism};
     #[cfg(feature = "matrixmultiply")]
     use matrixmultiply::sgemm;
 
@@ -243,7 +245,12 @@ pub mod tests {
         Dim,
     }
 
-    #[cfg(any(feature = "cblas", feature = "intel-mkl", feature = "matrixmultiply"))]
+    #[cfg(any(
+        feature = "cblas",
+        feature = "intel-mkl",
+        feature = "matrixmultiply",
+        feature = "faer-rs"
+    ))]
     #[inline]
     pub fn matmul<const TRANSPOSE: bool>(
         a: &Tensor,
@@ -330,6 +337,21 @@ pub mod tests {
                     cp.as_mut_ptr(),
                     cr,
                     cc,
+                );
+            }
+
+            #[cfg(feature = "faer-rs")]
+            unsafe {
+                mul::matmul(
+                    MatMut::from_raw_parts(cp.as_mut_ptr(), m, n, cr, cc),
+                    Conj::No,
+                    MatRef::from_raw_parts(ap.as_ptr(), m, k, ar, ac),
+                    Conj::No,
+                    MatRef::from_raw_parts(bp.as_ptr(), k, n, br, bc),
+                    Conj::No,
+                    Some(1.0),
+                    1.0,
+                    Parallelism::Rayon(0),
                 );
             }
 
@@ -492,7 +514,7 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
+    #[cfg(any(feature = "cblas", feature = "intel-mkl", feature = "faer-rs"))]
     fn ggml_comparison() {
         let m = 6;
         let n = 768 * 3;
@@ -519,7 +541,7 @@ pub mod tests {
         assert_close(&c.data(), &c2.data());
     }
 
-    #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
+    #[cfg(any(feature = "cblas", feature = "intel-mkl", feature = "faer-rs"))]
     pub fn assert_close(a: &[f32], b: &[f32]) {
         a.iter().zip(b.iter()).for_each(|(&a, &b)| {
             if ((a - b) / a).abs() > 1e-5 {

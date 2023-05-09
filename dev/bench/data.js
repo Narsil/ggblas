@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1681734516593,
+  "lastUpdate": 1683619122781,
   "repoUrl": "https://github.com/Narsil/ggblas",
   "entries": {
     "Rust Benchmark": [
@@ -551,6 +551,50 @@ window.BENCHMARK_DATA = {
             "name": "bench_matrixmultiply_t",
             "value": 1082721,
             "range": "± 45810",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Narsil",
+            "username": "Narsil"
+          },
+          "committer": {
+            "name": "Narsil",
+            "username": "Narsil"
+          },
+          "id": "27b815bc8d1c12103d2097ca3b360679a3f0dc3d",
+          "message": "Fixing threading issue.",
+          "timestamp": "2023-05-08T20:05:32Z",
+          "url": "https://github.com/Narsil/ggblas/pull/2/commits/27b815bc8d1c12103d2097ca3b360679a3f0dc3d"
+        },
+        "date": 1683619122303,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench_ggblas_n",
+            "value": 1003858,
+            "range": "± 8047",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t",
+            "value": 664515,
+            "range": "± 39389",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_n",
+            "value": 1217602,
+            "range": "± 591750",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_t",
+            "value": 1133542,
+            "range": "± 476531",
             "unit": "ns/iter"
           }
         ]

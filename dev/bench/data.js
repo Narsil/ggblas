@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1683619122781,
+  "lastUpdate": 1683619149333,
   "repoUrl": "https://github.com/Narsil/ggblas",
   "entries": {
     "Rust Benchmark": [
@@ -595,6 +595,54 @@ window.BENCHMARK_DATA = {
             "name": "bench_matrixmultiply_t",
             "value": 1133542,
             "range": "± 476531",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patry.nicolas@protonmail.com",
+            "name": "Nicolas Patry",
+            "username": "Narsil"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e213c8ac745dd5a0a705ce3379ca5ba0fc9c04d",
+          "message": "Merge pull request #2 from Narsil/thread_fix\n\nFixing threading issue.",
+          "timestamp": "2023-05-09T09:58:19+02:00",
+          "tree_id": "c33436b4fa56e53d5321ec12d551cdf1f5a9e111",
+          "url": "https://github.com/Narsil/ggblas/commit/1e213c8ac745dd5a0a705ce3379ca5ba0fc9c04d"
+        },
+        "date": 1683619148489,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench_ggblas_n",
+            "value": 1477261,
+            "range": "± 270607",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t",
+            "value": 734940,
+            "range": "± 216423",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_n",
+            "value": 1680122,
+            "range": "± 519532",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_t",
+            "value": 1650812,
+            "range": "± 671634",
             "unit": "ns/iter"
           }
         ]

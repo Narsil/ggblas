@@ -439,7 +439,7 @@ pub mod tests {
     }
 
     #[test]
-    fn ggml_simple() {
+    fn ggml_simple1() {
         let m = 3;
         let n = 2;
         let k = 4;

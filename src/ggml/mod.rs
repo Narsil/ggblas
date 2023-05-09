@@ -28,6 +28,13 @@ pub mod simd128;
 #[cfg(target_feature = "simd128")]
 pub use simd128::CurrentCpu;
 
+#[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
+#[cfg(target_feature = "neon")]
+pub mod neon;
+#[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
+#[cfg(target_feature = "neon")]
+pub use neon::CurrentCpu;
+
 #[cfg(any(
     target_feature = "neon",
     target_feature = "avx",

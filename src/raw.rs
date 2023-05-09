@@ -18,7 +18,7 @@ pub unsafe fn ggml_compute_forward_mul_mat(
     let ap = ap.as_ptr();
     let bp = bp.as_ptr();
     let cp = cp.as_mut_ptr();
-    let total = batching * m * k;
+    let total = batching * m;
 
     let n_cpu = pool.max_count();
     let ap = ap as usize;
@@ -29,23 +29,23 @@ pub unsafe fn ggml_compute_forward_mul_mat(
     (0..n_cpu).for_each(|ith| {
         pool.execute(move || {
             (ith * total_th..std::cmp::min(total, (ith + 1) * total_th)).for_each(|iter| {
-                let step = iter / (m * k);
-                let i = (iter / k) % m;
-                let kk = iter % k;
+                let step = iter / m;
+                let i = iter % m;
+                (0..k).for_each(|kk| {
+                    let a_start = step * a_skip + i * k + kk;
+                    let b_start = step * b_skip + kk * n;
+                    let c_start = step * c_skip + (i * n);
 
-                let a_start = step * a_skip + i * k + kk;
-                let b_start = step * b_skip + kk * n;
-                let c_start = step * c_skip + (i * n);
-
-                unsafe {
-                    let ap = ap as *const f32;
-                    let bp = bp as *const f32;
-                    let cp = cp as *mut f32;
-                    let av = *ap.add(a_start);
-                    let b_row = bp.add(b_start);
-                    let c_row = cp.add(c_start);
-                    vec_mad_f32(b_row, c_row, av, n);
-                }
+                    unsafe {
+                        let ap = ap as *const f32;
+                        let bp = bp as *const f32;
+                        let cp = cp as *mut f32;
+                        let av = *ap.add(a_start);
+                        let b_row = bp.add(b_start);
+                        let c_row = cp.add(c_start);
+                        vec_mad_f32(b_row, c_row, av, n);
+                    }
+                });
             });
         });
     });

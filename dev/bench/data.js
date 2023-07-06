@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688638541610,
+  "lastUpdate": 1688655768384,
   "repoUrl": "https://github.com/Narsil/ggblas",
   "entries": {
     "Rust Benchmark": [
@@ -855,6 +855,66 @@ window.BENCHMARK_DATA = {
             "name": "bench_matrixmultiply_t",
             "value": 1173241,
             "range": "± 146783",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patry.nicolas@protonmail.com",
+            "name": "Nicolas Patry",
+            "username": "Narsil"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d7a4df7f6106d8656be943e3d0a5cd250c6e6927",
+          "message": "Merge pull request #3 from Narsil/f16_support\n\nAdding f16 support (AVX).",
+          "timestamp": "2023-07-06T17:02:04+02:00",
+          "tree_id": "b9b2065e702d793945d65e6da5d4889bb03617b1",
+          "url": "https://github.com/Narsil/ggblas/commit/d7a4df7f6106d8656be943e3d0a5cd250c6e6927"
+        },
+        "date": 1688655767632,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench_ggblas_n",
+            "value": 1182341,
+            "range": "± 70425",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t_f16_mixed",
+            "value": 700128,
+            "range": "± 746169",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t_f16_pure",
+            "value": 687517,
+            "range": "± 19412",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t_f32",
+            "value": 766092,
+            "range": "± 89905",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_n",
+            "value": 1244419,
+            "range": "± 59920",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_t",
+            "value": 1289729,
+            "range": "± 34590",
             "unit": "ns/iter"
           }
         ]

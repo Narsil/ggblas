@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688637162535,
+  "lastUpdate": 1688638022682,
   "repoUrl": "https://github.com/Narsil/ggblas",
   "entries": {
     "Rust Benchmark": [
@@ -743,6 +743,62 @@ window.BENCHMARK_DATA = {
             "name": "bench_matrixmultiply_t",
             "value": 1620038,
             "range": "± 935631",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Narsil",
+            "username": "Narsil"
+          },
+          "committer": {
+            "name": "Narsil",
+            "username": "Narsil"
+          },
+          "id": "744300334b13be83ae59380d6137998cc8bc9148",
+          "message": "Adding f16 support (AVX).",
+          "timestamp": "2023-05-30T17:57:36Z",
+          "url": "https://github.com/Narsil/ggblas/pull/3/commits/744300334b13be83ae59380d6137998cc8bc9148"
+        },
+        "date": 1688638021429,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench_ggblas_n",
+            "value": 1331626,
+            "range": "± 151673",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t_f16_mixed",
+            "value": 808104,
+            "range": "± 30638",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t_f16_pure",
+            "value": 818554,
+            "range": "± 14794",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t_f32",
+            "value": 982707,
+            "range": "± 49430",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_n",
+            "value": 1400094,
+            "range": "± 194789",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_t",
+            "value": 3517952,
+            "range": "± 303833",
             "unit": "ns/iter"
           }
         ]

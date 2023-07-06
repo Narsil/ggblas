@@ -67,7 +67,11 @@
 #![allow(clippy::too_many_arguments)]
 mod ggml;
 mod raw;
-use raw::{ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t};
+use half::f16;
+use raw::{
+    ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t,
+    ggml_compute_forward_mul_mat_t_f16,
+};
 
 #[cfg(target_arch = "wasm32")]
 mod wasm_pool;
@@ -140,6 +144,33 @@ pub fn batched_sgemm_t(ap: &[f32], bp: &[f32], cp: &mut [f32], m: usize, n: usiz
     assert_eq!(batching, cp.len() / c_skip);
     unsafe {
         ggml_compute_forward_mul_mat_t(
+            ap,
+            a_skip,
+            bp,
+            b_skip,
+            cp,
+            c_skip,
+            m,
+            n,
+            k,
+            batching,
+            #[cfg(target_arch = "wasm32")]
+            &get_pool().unwrap(),
+            #[cfg(not(target_arch = "wasm32"))]
+            get_pool().unwrap(),
+        );
+    }
+}
+
+pub fn batched_sgemm_t_f16(ap: &[f32], bp: &[f16], cp: &mut [f32], m: usize, n: usize, k: usize) {
+    let a_skip = m * k;
+    let b_skip = k * n;
+    let c_skip = m * n;
+    let batching = ap.len() / a_skip;
+    assert_eq!(batching, bp.len() / b_skip);
+    assert_eq!(batching, cp.len() / c_skip);
+    unsafe {
+        ggml_compute_forward_mul_mat_t_f16(
             ap,
             a_skip,
             bp,
@@ -436,6 +467,20 @@ pub mod tests {
         batched_sgemm(a.data(), b.data(), c.data_mut(), m, n, k);
 
         assert_eq!(c.data(), [7., 10., 15., 22.]);
+    }
+
+    #[test]
+    fn ggml_simple_f16() {
+        let m = 3;
+        let n = 2;
+        let k = 4;
+
+        let a_data: Vec<f32> = (0..m * k).map(|s| (s + 1) as f32).collect();
+        let b_data: Vec<f16> = (0..n * k).map(|s| f16::from_f32((s + 1) as f32)).collect();
+        let mut c_data = vec![0.0; m * n];
+        batched_sgemm_t_f16(&a_data, &b_data, &mut c_data, m, n, k);
+
+        assert_eq!(&c_data[..], [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
     }
 
     #[test]

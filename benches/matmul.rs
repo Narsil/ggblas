@@ -1,6 +1,7 @@
 #![feature(test)]
 
 extern crate test;
+use half::f16;
 use test::{black_box, Bencher};
 
 #[cfg(any(
@@ -11,7 +12,7 @@ use test::{black_box, Bencher};
 ))]
 use ggblas::tests::matmul;
 use ggblas::tests::Tensor;
-use ggblas::{batched_sgemm, batched_sgemm_t};
+use ggblas::{batched_sgemm, batched_sgemm_t, batched_sgemm_t_f16};
 
 const M: usize = 6;
 const N: usize = 768 * 3;
@@ -162,7 +163,7 @@ fn bench_matrixmultiply_t(bench: &mut Bencher) {
 }
 
 #[bench]
-fn bench_ggblas_t(bench: &mut Bencher) {
+fn bench_ggblas_t_f32(bench: &mut Bencher) {
     let a = Tensor {
         shape: vec![M, K],
         data: vec![0.0; M * K],
@@ -176,6 +177,14 @@ fn bench_ggblas_t(bench: &mut Bencher) {
         data: vec![0.0; M * N],
     };
     bench.iter(|| black_box(batched_sgemm_t(a.data(), b.data(), c.data_mut(), M, N, K)));
+}
+
+#[bench]
+fn bench_ggblas_t_f16(bench: &mut Bencher) {
+    let a_data = vec![0.0; M * K];
+    let b_data = vec![f16::from_f32(0.0); N * K];
+    let mut c_data = vec![0.0; M * N];
+    bench.iter(|| black_box(batched_sgemm_t_f16(&a_data, &b_data, &mut c_data, M, N, K)));
 }
 #[bench]
 fn bench_ggblas_n(bench: &mut Bencher) {

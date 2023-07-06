@@ -70,7 +70,7 @@ mod raw;
 use half::f16;
 use raw::{
     ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t,
-    ggml_compute_forward_mul_mat_t_f16,
+    ggml_compute_forward_mul_mat_t_f16_mixed, ggml_compute_forward_mul_mat_t_f16_pure,
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -98,13 +98,14 @@ static GUARD: Once = Once::new();
 #[cfg(not(target_arch = "wasm32"))]
 unsafe fn get_pool() -> Option<&'static ThreadPool> {
     GUARD.call_once(|| {
-        let pool = ThreadPool::new(num_cpus::get_physical());
-        let core_ids = core_affinity::get_core_ids().unwrap();
-        core_ids.into_iter().for_each(|core_id| {
-            pool.execute(move || {
-                core_affinity::set_for_current(core_id);
-            });
-        });
+        let pool = ThreadPool::new(num_cpus::get());
+        // let pool = ThreadPool::new(num_cpus::get_physical());
+        // let core_ids = core_affinity::get_core_ids().unwrap();
+        // core_ids.into_iter().for_each(|core_id| {
+        //     pool.execute(move || {
+        //         core_affinity::set_for_current(core_id);
+        //     });
+        // });
 
         HANDLE = Some(pool);
     });
@@ -162,7 +163,14 @@ pub fn batched_sgemm_t(ap: &[f32], bp: &[f32], cp: &mut [f32], m: usize, n: usiz
     }
 }
 
-pub fn batched_sgemm_t_f16(ap: &[f32], bp: &[f16], cp: &mut [f32], m: usize, n: usize, k: usize) {
+pub fn batched_sgemm_t_f16_mixed(
+    ap: &[f32],
+    bp: &[f16],
+    cp: &mut [f32],
+    m: usize,
+    n: usize,
+    k: usize,
+) {
     let a_skip = m * k;
     let b_skip = k * n;
     let c_skip = m * n;
@@ -170,7 +178,41 @@ pub fn batched_sgemm_t_f16(ap: &[f32], bp: &[f16], cp: &mut [f32], m: usize, n: 
     assert_eq!(batching, bp.len() / b_skip);
     assert_eq!(batching, cp.len() / c_skip);
     unsafe {
-        ggml_compute_forward_mul_mat_t_f16(
+        ggml_compute_forward_mul_mat_t_f16_mixed(
+            ap,
+            a_skip,
+            bp,
+            b_skip,
+            cp,
+            c_skip,
+            m,
+            n,
+            k,
+            batching,
+            #[cfg(target_arch = "wasm32")]
+            &get_pool().unwrap(),
+            #[cfg(not(target_arch = "wasm32"))]
+            get_pool().unwrap(),
+        );
+    }
+}
+
+pub fn batched_sgemm_t_f16_pure(
+    ap: &[f16],
+    bp: &[f16],
+    cp: &mut [f16],
+    m: usize,
+    n: usize,
+    k: usize,
+) {
+    let a_skip = m * k;
+    let b_skip = k * n;
+    let c_skip = m * n;
+    let batching = ap.len() / a_skip;
+    assert_eq!(batching, bp.len() / b_skip);
+    assert_eq!(batching, cp.len() / c_skip);
+    unsafe {
+        ggml_compute_forward_mul_mat_t_f16_pure(
             ap,
             a_skip,
             bp,
@@ -470,6 +512,21 @@ pub mod tests {
     }
 
     #[test]
+    fn ggml_simple_f16_pure() {
+        let m = 3;
+        let n = 2;
+        let k = 4;
+
+        let a_data: Vec<f16> = (0..m * k).map(|s| f16::from_f32((s + 1) as f32)).collect();
+        let b_data: Vec<f16> = (0..n * k).map(|s| f16::from_f32((s + 1) as f32)).collect();
+        let mut c_data = vec![f16::from_f32_const(0.0); m * n];
+        batched_sgemm_t_f16_pure(&a_data, &b_data, &mut c_data, m, n, k);
+
+        let expected = vec![30.0, 70.0, 70.0, 174.0, 110.0, 278.0];
+        let expected: Vec<_> = expected.into_iter().map(f16::from_f32).collect();
+        assert_eq!(&c_data[..], &expected[..]);
+    }
+    #[test]
     fn ggml_simple_f16() {
         let m = 3;
         let n = 2;
@@ -478,7 +535,7 @@ pub mod tests {
         let a_data: Vec<f32> = (0..m * k).map(|s| (s + 1) as f32).collect();
         let b_data: Vec<f16> = (0..n * k).map(|s| f16::from_f32((s + 1) as f32)).collect();
         let mut c_data = vec![0.0; m * n];
-        batched_sgemm_t_f16(&a_data, &b_data, &mut c_data, m, n, k);
+        batched_sgemm_t_f16_mixed(&a_data, &b_data, &mut c_data, m, n, k);
 
         assert_eq!(&c_data[..], [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
     }

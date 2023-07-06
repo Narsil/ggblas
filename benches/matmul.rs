@@ -12,7 +12,7 @@ use test::{black_box, Bencher};
 ))]
 use ggblas::tests::matmul;
 use ggblas::tests::Tensor;
-use ggblas::{batched_sgemm, batched_sgemm_t, batched_sgemm_t_f16};
+use ggblas::{batched_sgemm, batched_sgemm_t, batched_sgemm_t_f16_mixed, batched_sgemm_t_f16_pure};
 
 const M: usize = 6;
 const N: usize = 768 * 3;
@@ -180,11 +180,37 @@ fn bench_ggblas_t_f32(bench: &mut Bencher) {
 }
 
 #[bench]
-fn bench_ggblas_t_f16(bench: &mut Bencher) {
+fn bench_ggblas_t_f16_mixed(bench: &mut Bencher) {
     let a_data = vec![0.0; M * K];
     let b_data = vec![f16::from_f32(0.0); N * K];
     let mut c_data = vec![0.0; M * N];
-    bench.iter(|| black_box(batched_sgemm_t_f16(&a_data, &b_data, &mut c_data, M, N, K)));
+    bench.iter(|| {
+        black_box(batched_sgemm_t_f16_mixed(
+            &a_data,
+            &b_data,
+            &mut c_data,
+            M,
+            N,
+            K,
+        ))
+    });
+}
+
+#[bench]
+fn bench_ggblas_t_f16_pure(bench: &mut Bencher) {
+    let a_data = vec![f16::from_f32(0.0); M * K];
+    let b_data = vec![f16::from_f32(0.0); N * K];
+    let mut c_data = vec![f16::from_f32(0.0); M * N];
+    bench.iter(|| {
+        black_box(batched_sgemm_t_f16_pure(
+            &a_data,
+            &b_data,
+            &mut c_data,
+            M,
+            N,
+            K,
+        ))
+    });
 }
 #[bench]
 fn bench_ggblas_n(bench: &mut Bencher) {

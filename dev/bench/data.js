@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688636890344,
+  "lastUpdate": 1688637162535,
   "repoUrl": "https://github.com/Narsil/ggblas",
   "entries": {
     "Rust Benchmark": [
@@ -693,6 +693,56 @@ window.BENCHMARK_DATA = {
             "name": "bench_matrixmultiply_t",
             "value": 1338319,
             "range": "± 351673",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Narsil",
+            "username": "Narsil"
+          },
+          "committer": {
+            "name": "Narsil",
+            "username": "Narsil"
+          },
+          "id": "9d1cf982034218653fd1624043a8cbcee46a8697",
+          "message": "Adding f16 support.",
+          "timestamp": "2023-05-30T17:57:36Z",
+          "url": "https://github.com/Narsil/ggblas/pull/3/commits/9d1cf982034218653fd1624043a8cbcee46a8697"
+        },
+        "date": 1688637161519,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench_ggblas_n",
+            "value": 1435246,
+            "range": "± 629297",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t_f16",
+            "value": 1193822,
+            "range": "± 427330",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t_f32",
+            "value": 1308364,
+            "range": "± 503244",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_n",
+            "value": 2168399,
+            "range": "± 728061",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_t",
+            "value": 1620038,
+            "range": "± 935631",
             "unit": "ns/iter"
           }
         ]

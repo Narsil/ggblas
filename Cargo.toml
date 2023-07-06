@@ -24,6 +24,7 @@ num_cpus = "1.15.0"
 core_affinity = "0.8.0"
 matrixmultiply = { version = "0.3.2", features = ["threading"], optional=true }
 faer-core = { version = "0.7.0", optional = true }
+half = { version = "2.3.1", features = ["use-intrinsics"] }
 
 [dev-dependencies]
 num_cpus = "1.15.0"

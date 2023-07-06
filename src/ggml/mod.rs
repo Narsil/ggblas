@@ -204,5 +204,6 @@ pub unsafe fn f32_to_f16(x: *const f32, y: *mut f16, n: usize) {
     }
     while i < n {
         *y.add(i) = f16::from_f32(*x);
+        i += 1;
     }
 }

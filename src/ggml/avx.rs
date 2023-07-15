@@ -1,10 +1,13 @@
-use super::{Cpu, CpuF16};
+#[cfg(feature = "f16")]
+use super::f16::CpuF16;
+use super::Cpu;
+#[cfg(feature = "f16")]
+use half::f16;
+
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
-
-use half::f16;
 
 pub struct CurrentCpu {}
 
@@ -63,7 +66,9 @@ impl Cpu<ARR> for CurrentCpu {
     }
 }
 
+#[cfg(feature = "f16")]
 pub struct CurrentCpuF16 {}
+#[cfg(feature = "f16")]
 impl CpuF16<ARR> for CurrentCpuF16 {
     type Unit = __m256;
     type Array = [__m256; ARR];

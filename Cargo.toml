@@ -24,7 +24,7 @@ num_cpus = "1.15.0"
 core_affinity = "0.8.0"
 matrixmultiply = { version = "0.3.2", features = ["threading"], optional=true }
 faer-core = { version = "0.7.0", optional = true }
-half = { version = "2.3.1", features = ["use-intrinsics"] }
+half = { version = "2.3.1", features = ["use-intrinsics"], optional = true }
 
 [dev-dependencies]
 num_cpus = "1.15.0"
@@ -34,3 +34,4 @@ default = []
 intel-mkl = ["dep:cblas-sys", "dep:libc"]
 cblas = ["dep:cblas-sys", "dep:libc"]
 faer-rs = ["dep:faer-core"]
+f16 = ["dep:half"]

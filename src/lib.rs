@@ -67,11 +67,7 @@
 #![allow(clippy::too_many_arguments)]
 mod ggml;
 mod raw;
-#[cfg(feature = "f16")]
-use half::f16;
 use raw::{ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t};
-#[cfg(feature = "f16")]
-use raw::{ggml_compute_forward_mul_mat_t_f16_mixed, ggml_compute_forward_mul_mat_t_f16_pure};
 
 #[cfg(target_arch = "wasm32")]
 mod wasm_pool;
@@ -215,7 +211,13 @@ pub fn batched_sgemm(ap: &[f32], bp: &[f32], cp: &mut [f32], m: usize, n: usize,
 }
 
 #[cfg(feature = "f16")]
-mod f16 {
+pub mod f16 {
+    use super::get_pool;
+    use super::raw::f16::{
+        ggml_compute_forward_mul_mat_t_f16_mixed, ggml_compute_forward_mul_mat_t_f16_pure,
+    };
+    use half::f16;
+
     pub fn batched_sgemm_t_f16_mixed(
         ap: &[f32],
         bp: &[f16],

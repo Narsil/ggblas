@@ -103,8 +103,9 @@ pub unsafe fn ggml_compute_forward_mul_mat_t(
 }
 
 #[cfg(feature = "f16")]
-mod f16 {
-    use crate::ggml::{f32_to_f16, vec_dot_f16};
+pub mod f16 {
+    use super::ThreadPool;
+    use crate::ggml::f16::{f32_to_f16, vec_dot_f16};
     use half::f16;
 
     pub unsafe fn ggml_compute_forward_mul_mat_t_f16_mixed(

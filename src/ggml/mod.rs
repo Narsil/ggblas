@@ -117,13 +117,28 @@ pub unsafe fn vec_mad_f32(a_row: *const f32, c_row: *mut f32, v: f32, n: usize) 
 }
 
 #[cfg(feature = "f16")]
-mod f16 {
+#[cfg(target_arch = "wasm32")]
+#[cfg(target_feature = "simd128")]
+pub mod simd128_f16;
+
+#[cfg(feature = "f16")]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(target_feature = "avx")]
+mod avx_f16;
+
+#[cfg(feature = "f16")]
+pub mod f16 {
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     #[cfg(target_feature = "avx")]
-    pub use super::avx::CurrentCpuF16;
+    pub use super::avx_f16::CurrentCpuF16;
+
+    #[cfg(target_arch = "wasm32")]
+    #[cfg(target_feature = "simd128")]
+    pub use super::simd128_f16::CurrentCpuF16;
+
     use half::f16;
 
-    trait CpuF16<const ARR: usize> {
+    pub trait CpuF16<const ARR: usize> {
         type Unit;
         type Array;
         const STEP: usize;
@@ -138,7 +153,6 @@ mod f16 {
         unsafe fn from_f32(v: f32) -> Self::Unit;
         unsafe fn vec_store(mem_addr: *mut f16, a: Self::Unit);
     }
-    use half::f16;
 
     #[cfg(any(
         target_feature = "neon",

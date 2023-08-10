@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691672604712,
+  "lastUpdate": 1691675781338,
   "repoUrl": "https://github.com/Narsil/ggblas",
   "entries": {
     "Rust Benchmark": [
@@ -1059,6 +1059,54 @@ window.BENCHMARK_DATA = {
             "name": "bench_matrixmultiply_t",
             "value": 81491796,
             "range": "± 2478152",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patry.nicolas@protonmail.com",
+            "name": "Nicolas Patry",
+            "username": "Narsil"
+          },
+          "committer": {
+            "email": "patry.nicolas@protonmail.com",
+            "name": "Nicolas Patry",
+            "username": "Narsil"
+          },
+          "distinct": true,
+          "id": "5be3d1b697db5be9121c403b6ef835bef52ae215",
+          "message": "Pub + safety + bump",
+          "timestamp": "2023-08-10T15:54:50+02:00",
+          "tree_id": "58d39bed9639a3b90debc7996986bfea3a88a9ef",
+          "url": "https://github.com/Narsil/ggblas/commit/5be3d1b697db5be9121c403b6ef835bef52ae215"
+        },
+        "date": 1691675780871,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench_ggblas_n",
+            "value": 9763669,
+            "range": "± 1004681",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t_f32",
+            "value": 4183654,
+            "range": "± 190548",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_n",
+            "value": 45292978,
+            "range": "± 1181185",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_t",
+            "value": 82237358,
+            "range": "± 2401545",
             "unit": "ns/iter"
           }
         ]

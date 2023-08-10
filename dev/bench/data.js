@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691672186321,
+  "lastUpdate": 1691672604712,
   "repoUrl": "https://github.com/Narsil/ggblas",
   "entries": {
     "Rust Benchmark": [
@@ -1011,6 +1011,54 @@ window.BENCHMARK_DATA = {
             "name": "bench_matrixmultiply_t",
             "value": 50345614,
             "range": "± 5683179",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patry.nicolas@protonmail.com",
+            "name": "Nicolas Patry",
+            "username": "Narsil"
+          },
+          "committer": {
+            "email": "patry.nicolas@protonmail.com",
+            "name": "Nicolas Patry",
+            "username": "Narsil"
+          },
+          "distinct": true,
+          "id": "12901838b1304d4bd225a26e7d4ac5cb9b825eb1",
+          "message": "Fixing f16-arm (by skipping it)",
+          "timestamp": "2023-08-10T15:02:01+02:00",
+          "tree_id": "bee5fa815aae27779f684a47abe015b703e36732",
+          "url": "https://github.com/Narsil/ggblas/commit/12901838b1304d4bd225a26e7d4ac5cb9b825eb1"
+        },
+        "date": 1691672604258,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench_ggblas_n",
+            "value": 9058834,
+            "range": "± 636465",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_ggblas_t_f32",
+            "value": 3230174,
+            "range": "± 118299",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_n",
+            "value": 42927155,
+            "range": "± 1674099",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench_matrixmultiply_t",
+            "value": 81491796,
+            "range": "± 2478152",
             "unit": "ns/iter"
           }
         ]

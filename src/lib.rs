@@ -65,7 +65,7 @@
 //!
 #![allow(clippy::reversed_empty_ranges)]
 #![allow(clippy::too_many_arguments)]
-mod ggml;
+pub mod ggml;
 mod raw;
 use raw::{ggml_compute_forward_mul_mat, ggml_compute_forward_mul_mat_t};
 

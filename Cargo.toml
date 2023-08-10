@@ -1,6 +1,6 @@
 [package]
 name = "ggblas"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 homepage = "https://github.com/Narsil/ggblas"
 repository = "https://github.com/Narsil/ggblas"

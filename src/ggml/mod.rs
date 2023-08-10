@@ -41,6 +41,8 @@ pub use neon::CurrentCpu;
     target_feature = "simd128"
 ))]
 #[inline(never)]
+/// # Safety
+/// This requires the user to check that `k` is actually valid  for all pointers
 pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: usize) {
     let np = k & !(CurrentCpu::STEP - 1);
 
@@ -70,6 +72,8 @@ pub unsafe fn vec_dot_f32(a_row: *const f32, b_row: *const f32, c: *mut f32, k: 
     target_feature = "avx",
     target_feature = "simd128"
 ))]
+/// # Safety
+/// This requires the user to check that `n` is actually valid  for all pointers
 pub unsafe fn vec_mad_f32(b_row: *const f32, c_row: *mut f32, v: f32, n: usize) {
     let np = n & !(CurrentCpu::STEP - 1);
 

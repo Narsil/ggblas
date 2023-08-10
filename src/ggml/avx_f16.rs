@@ -1,6 +1,10 @@
 use super::f16::CpuF16;
 use half::f16;
 pub struct CurrentCpuF16 {}
+#[cfg(target_arch = "x86")]
+use core::arch::x86::*;
+#[cfg(target_arch = "x86_64")]
+use core::arch::x86_64::*;
 
 const STEP: usize = 32;
 const EPR: usize = 8;

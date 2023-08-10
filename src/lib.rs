@@ -285,375 +285,386 @@ pub mod f16 {
             );
         }
     }
+}
 
-    pub mod tests {
-        #[cfg(test)]
-        use super::*;
+pub mod tests {
+    #[cfg(test)]
+    use super::*;
 
-        #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
-        use cblas_sys::{
-            cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
-            CblasRowMajor as RowMajor, CblasTrans as Tr,
+    #[cfg(test)]
+    #[cfg(feature = "f16")]
+    use crate::f16::{batched_sgemm_t_f16_mixed, batched_sgemm_t_f16_pure};
+
+    #[cfg(test)]
+    #[cfg(feature = "f16")]
+    use half::f16;
+
+    #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
+    use cblas_sys::{
+        cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
+        CblasRowMajor as RowMajor, CblasTrans as Tr,
+    };
+    #[cfg(feature = "faer-rs")]
+    use faer_core::{mul, Conj, MatMut, MatRef, Parallelism};
+    #[cfg(feature = "matrixmultiply")]
+    use matrixmultiply::sgemm;
+
+    pub struct Tensor {
+        pub shape: Vec<usize>,
+        pub data: Vec<f32>,
+    }
+
+    impl Tensor {
+        pub fn shape(&self) -> &[usize] {
+            &self.shape
+        }
+        pub fn data(&self) -> &[f32] {
+            &self.data
+        }
+        pub fn data_mut(&mut self) -> &mut [f32] {
+            &mut self.data
+        }
+    }
+
+    #[derive(Debug)]
+    pub enum Error {
+        Dim,
+    }
+
+    #[cfg(any(
+        feature = "cblas",
+        feature = "intel-mkl",
+        feature = "matrixmultiply",
+        feature = "faer-rs"
+    ))]
+    #[inline]
+    pub fn matmul<const TRANSPOSE: bool>(
+        a: &Tensor,
+        b: &Tensor,
+        c: &mut Tensor,
+    ) -> Result<(), Error> {
+        let dim = a.shape().len();
+
+        if dim < 2 {
+            return Err(Error::Dim);
+        }
+        if b.shape().len() != dim {
+            return Err(Error::Dim);
+        }
+        if c.shape().len() != dim {
+            return Err(Error::Dim);
+        }
+
+        let m = a.shape()[dim - 2];
+        let k = a.shape()[dim - 1];
+
+        let mut expected_c = a.shape().to_vec();
+        let mut expected_b = a.shape().to_vec();
+
+        let (expected_b, n) = if TRANSPOSE {
+            let n = b.shape()[dim - 2];
+            expected_b[dim - 2] = n;
+            expected_b[dim - 1] = k;
+            (expected_b, n)
+        } else {
+            let n = b.shape()[dim - 1];
+            expected_b[dim - 2] = k;
+            expected_b[dim - 1] = n;
+            (expected_b, n)
         };
-        #[cfg(feature = "faer-rs")]
-        use faer_core::{mul, Conj, MatMut, MatRef, Parallelism};
-        #[cfg(feature = "matrixmultiply")]
-        use matrixmultiply::sgemm;
 
-        pub struct Tensor {
-            pub shape: Vec<usize>,
-            pub data: Vec<f32>,
+        expected_c[dim - 2] = m;
+        expected_c[dim - 1] = n;
+
+        if expected_b != b.shape() {
+            return Err(Error::Dim);
         }
 
-        impl Tensor {
-            pub fn shape(&self) -> &[usize] {
-                &self.shape
-            }
-            pub fn data(&self) -> &[f32] {
-                &self.data
-            }
-            pub fn data_mut(&mut self) -> &mut [f32] {
-                &mut self.data
-            }
+        if expected_c != c.shape() {
+            return Err(Error::Dim);
         }
 
-        #[derive(Debug)]
-        pub enum Error {
-            Dim,
-        }
+        // Zero out c
+        // c.data_mut().iter_mut().for_each(|v| *v = 0.0);
 
-        #[cfg(any(
-            feature = "cblas",
-            feature = "intel-mkl",
-            feature = "matrixmultiply",
-            feature = "faer-rs"
-        ))]
-        #[inline]
-        pub fn matmul<const TRANSPOSE: bool>(
-            a: &Tensor,
-            b: &Tensor,
-            c: &mut Tensor,
-        ) -> Result<(), Error> {
-            let dim = a.shape().len();
+        let batching: usize = a.shape()[..dim - 2].iter().product();
+        let a_skip: usize = m * k;
+        let b_skip: usize = n * k;
+        let c_skip: usize = m * n;
 
-            if dim < 2 {
-                return Err(Error::Dim);
-            }
-            if b.shape().len() != dim {
-                return Err(Error::Dim);
-            }
-            if c.shape().len() != dim {
-                return Err(Error::Dim);
-            }
+        let ar = k as isize;
+        let ac = 1;
+        let (br, bc) = if TRANSPOSE {
+            (1, b.shape()[dim - 1] as isize)
+        } else {
+            (b.shape()[dim - 1] as isize, 1)
+        };
+        let cr = n as isize;
+        let cc = 1;
 
-            let m = a.shape()[dim - 2];
-            let k = a.shape()[dim - 1];
-
-            let mut expected_c = a.shape().to_vec();
-            let mut expected_b = a.shape().to_vec();
-
-            let (expected_b, n) = if TRANSPOSE {
-                let n = b.shape()[dim - 2];
-                expected_b[dim - 2] = n;
-                expected_b[dim - 1] = k;
-                (expected_b, n)
-            } else {
-                let n = b.shape()[dim - 1];
-                expected_b[dim - 2] = k;
-                expected_b[dim - 1] = n;
-                (expected_b, n)
-            };
-
-            expected_c[dim - 2] = m;
-            expected_c[dim - 1] = n;
-
-            if expected_b != b.shape() {
-                return Err(Error::Dim);
+        (0..batching).for_each(|step| {
+            let ap = &a.data()[step * a_skip..];
+            let bp = &b.data()[step * b_skip..];
+            let cp = &mut c.data_mut()[step * c_skip..];
+            #[cfg(feature = "matrixmultiply")]
+            unsafe {
+                sgemm(
+                    m,
+                    k,
+                    n,
+                    1.0,
+                    ap.as_ptr(),
+                    ar,
+                    ac,
+                    bp.as_ptr(),
+                    br,
+                    bc,
+                    1.0,
+                    cp.as_mut_ptr(),
+                    cr,
+                    cc,
+                );
             }
 
-            if expected_c != c.shape() {
-                return Err(Error::Dim);
+            #[cfg(feature = "faer-rs")]
+            unsafe {
+                mul::matmul(
+                    MatMut::from_raw_parts(cp.as_mut_ptr(), m, n, cr, cc),
+                    Conj::No,
+                    MatRef::from_raw_parts(ap.as_ptr(), m, k, ar, ac),
+                    Conj::No,
+                    MatRef::from_raw_parts(bp.as_ptr(), k, n, br, bc),
+                    Conj::No,
+                    Some(1.0),
+                    1.0,
+                    Parallelism::Rayon(0),
+                );
             }
 
-            // Zero out c
-            // c.data_mut().iter_mut().for_each(|v| *v = 0.0);
+            #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
+            unsafe {
+                let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
+                let (layout, a_tr, b_tr, lda, ldb, ldc) = if cr < cc {
+                    let (lda, a_tr) = if ar < ac { (m, NoTr) } else { (k, Tr) };
+                    let (ldb, b_tr) = if br < bc { (k, NoTr) } else { (n, Tr) };
+                    (ColMajor, a_tr, b_tr, lda, ldb, m)
+                } else {
+                    let (lda, a_tr) = if ar < ac { (m, Tr) } else { (k, NoTr) };
+                    let (ldb, b_tr) = if br < bc { (k, Tr) } else { (n, NoTr) };
+                    (RowMajor, a_tr, b_tr, lda, ldb, n)
+                };
+                sgemm(
+                    layout,
+                    a_tr,
+                    b_tr,
+                    m,
+                    n,
+                    k,
+                    1.0,
+                    ap.as_ptr(),
+                    lda,
+                    // a_skip as i32,
+                    bp.as_ptr(),
+                    ldb,
+                    // b_skip as i32,
+                    1.0,
+                    cp.as_mut_ptr(),
+                    ldc,
+                    // c_skip as i32,
+                    // batching as i32,
+                )
+            }
+        });
+        Ok(())
+    }
 
-            let batching: usize = a.shape()[..dim - 2].iter().product();
-            let a_skip: usize = m * k;
-            let b_skip: usize = n * k;
-            let c_skip: usize = m * n;
+    #[test]
+    fn ggml_simple_t() {
+        let m = 3;
+        let n = 2;
+        let k = 4;
 
-            let ar = k as isize;
-            let ac = 1;
-            let (br, bc) = if TRANSPOSE {
-                (1, b.shape()[dim - 1] as isize)
-            } else {
-                (b.shape()[dim - 1] as isize, 1)
-            };
-            let cr = n as isize;
-            let cc = 1;
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![n, k],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        batched_sgemm_t(a.data(), b.data(), c.data_mut(), m, n, k);
 
-            (0..batching).for_each(|step| {
-                let ap = &a.data()[step * a_skip..];
-                let bp = &b.data()[step * b_skip..];
-                let cp = &mut c.data_mut()[step * c_skip..];
-                #[cfg(feature = "matrixmultiply")]
-                unsafe {
-                    sgemm(
-                        m,
-                        k,
-                        n,
-                        1.0,
-                        ap.as_ptr(),
-                        ar,
-                        ac,
-                        bp.as_ptr(),
-                        br,
-                        bc,
-                        1.0,
-                        cp.as_mut_ptr(),
-                        cr,
-                        cc,
-                    );
-                }
+        assert_eq!(c.data(), [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
+    }
 
-                #[cfg(feature = "faer-rs")]
-                unsafe {
-                    mul::matmul(
-                        MatMut::from_raw_parts(cp.as_mut_ptr(), m, n, cr, cc),
-                        Conj::No,
-                        MatRef::from_raw_parts(ap.as_ptr(), m, k, ar, ac),
-                        Conj::No,
-                        MatRef::from_raw_parts(bp.as_ptr(), k, n, br, bc),
-                        Conj::No,
-                        Some(1.0),
-                        1.0,
-                        Parallelism::Rayon(0),
-                    );
-                }
+    #[test]
+    fn ggml_simple2() {
+        let m = 2;
+        let n = 2;
+        let k = 2;
 
-                #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
-                unsafe {
-                    let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-                    let (layout, a_tr, b_tr, lda, ldb, ldc) = if cr < cc {
-                        let (lda, a_tr) = if ar < ac { (m, NoTr) } else { (k, Tr) };
-                        let (ldb, b_tr) = if br < bc { (k, NoTr) } else { (n, Tr) };
-                        (ColMajor, a_tr, b_tr, lda, ldb, m)
-                    } else {
-                        let (lda, a_tr) = if ar < ac { (m, Tr) } else { (k, NoTr) };
-                        let (ldb, b_tr) = if br < bc { (k, Tr) } else { (n, NoTr) };
-                        (RowMajor, a_tr, b_tr, lda, ldb, n)
-                    };
-                    sgemm(
-                        layout,
-                        a_tr,
-                        b_tr,
-                        m,
-                        n,
-                        k,
-                        1.0,
-                        ap.as_ptr(),
-                        lda,
-                        // a_skip as i32,
-                        bp.as_ptr(),
-                        ldb,
-                        // b_skip as i32,
-                        1.0,
-                        cp.as_mut_ptr(),
-                        ldc,
-                        // c_skip as i32,
-                        // batching as i32,
-                    )
-                }
-            });
-            Ok(())
-        }
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![k, n],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        batched_sgemm(a.data(), b.data(), c.data_mut(), m, n, k);
 
-        #[test]
-        fn ggml_simple_t() {
-            let m = 3;
-            let n = 2;
-            let k = 4;
+        assert_eq!(c.data(), [7., 10., 15., 22.]);
+    }
 
-            let a = Tensor {
-                shape: vec![m, k],
-                data: (0..m * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let b = Tensor {
-                shape: vec![n, k],
-                data: (0..n * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let mut c = Tensor {
-                shape: vec![m, n],
-                data: vec![0.0; m * n],
-            };
-            batched_sgemm_t(a.data(), b.data(), c.data_mut(), m, n, k);
+    #[test]
+    #[cfg(feature = "f16")]
+    fn ggml_simple_f16_pure() {
+        let m = 3;
+        let n = 2;
+        let k = 4;
 
-            assert_eq!(c.data(), [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
-        }
+        let a_data: Vec<f16> = (0..m * k).map(|s| f16::from_f32((s + 1) as f32)).collect();
+        let b_data: Vec<f16> = (0..n * k).map(|s| f16::from_f32((s + 1) as f32)).collect();
+        let mut c_data = vec![f16::from_f32_const(0.0); m * n];
+        batched_sgemm_t_f16_pure(&a_data, &b_data, &mut c_data, m, n, k);
 
-        #[test]
-        fn ggml_simple2() {
-            let m = 2;
-            let n = 2;
-            let k = 2;
+        let expected = vec![30.0, 70.0, 70.0, 174.0, 110.0, 278.0];
+        let expected: Vec<_> = expected.into_iter().map(f16::from_f32).collect();
+        assert_eq!(&c_data[..], &expected[..]);
+    }
 
-            let a = Tensor {
-                shape: vec![m, k],
-                data: (0..m * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let b = Tensor {
-                shape: vec![k, n],
-                data: (0..n * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let mut c = Tensor {
-                shape: vec![m, n],
-                data: vec![0.0; m * n],
-            };
-            batched_sgemm(a.data(), b.data(), c.data_mut(), m, n, k);
+    #[test]
+    #[cfg(feature = "f16")]
+    fn ggml_simple_f16() {
+        let m = 3;
+        let n = 2;
+        let k = 4;
 
-            assert_eq!(c.data(), [7., 10., 15., 22.]);
-        }
+        let a_data: Vec<f32> = (0..m * k).map(|s| (s + 1) as f32).collect();
+        let b_data: Vec<f16> = (0..n * k).map(|s| f16::from_f32((s + 1) as f32)).collect();
+        let mut c_data = vec![0.0; m * n];
+        batched_sgemm_t_f16_mixed(&a_data, &b_data, &mut c_data, m, n, k);
 
-        #[test]
-        fn ggml_simple_f16_pure() {
-            let m = 3;
-            let n = 2;
-            let k = 4;
+        assert_eq!(&c_data[..], [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
+    }
 
-            let a_data: Vec<f16> = (0..m * k).map(|s| f16::from_f32((s + 1) as f32)).collect();
-            let b_data: Vec<f16> = (0..n * k).map(|s| f16::from_f32((s + 1) as f32)).collect();
-            let mut c_data = vec![f16::from_f32_const(0.0); m * n];
-            batched_sgemm_t_f16_pure(&a_data, &b_data, &mut c_data, m, n, k);
+    #[test]
+    fn ggml_simple1() {
+        let m = 3;
+        let n = 2;
+        let k = 4;
 
-            let expected = vec![30.0, 70.0, 70.0, 174.0, 110.0, 278.0];
-            let expected: Vec<_> = expected.into_iter().map(f16::from_f32).collect();
-            assert_eq!(&c_data[..], &expected[..]);
-        }
-        #[test]
-        fn ggml_simple_f16() {
-            let m = 3;
-            let n = 2;
-            let k = 4;
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![k, n],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        batched_sgemm(a.data(), b.data(), c.data_mut(), m, n, k);
 
-            let a_data: Vec<f32> = (0..m * k).map(|s| (s + 1) as f32).collect();
-            let b_data: Vec<f16> = (0..n * k).map(|s| f16::from_f32((s + 1) as f32)).collect();
-            let mut c_data = vec![0.0; m * n];
-            batched_sgemm_t_f16_mixed(&a_data, &b_data, &mut c_data, m, n, k);
+        assert_eq!(c.data(), [50., 60., 114., 140., 178., 220.]);
+    }
 
-            assert_eq!(&c_data[..], [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
-        }
+    #[test]
+    #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
+    fn mkl_simple() {
+        let m = 3;
+        let n = 2;
+        let k = 4;
 
-        #[test]
-        fn ggml_simple1() {
-            let m = 3;
-            let n = 2;
-            let k = 4;
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![n, k],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        matmul::<true>(&a, &b, &mut c).unwrap();
 
-            let a = Tensor {
-                shape: vec![m, k],
-                data: (0..m * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let b = Tensor {
-                shape: vec![k, n],
-                data: (0..n * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let mut c = Tensor {
-                shape: vec![m, n],
-                data: vec![0.0; m * n],
-            };
-            batched_sgemm(a.data(), b.data(), c.data_mut(), m, n, k);
+        assert_eq!(c.data(), [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
+    }
 
-            assert_eq!(c.data(), [50., 60., 114., 140., 178., 220.]);
-        }
+    #[test]
+    #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
+    fn ggml_comparison_t() {
+        let m = 6;
+        let n = 768 * 3;
+        let k = 768;
 
-        #[test]
-        #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
-        fn mkl_simple() {
-            let m = 3;
-            let n = 2;
-            let k = 4;
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![n, k],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        let mut c2 = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        matmul::<true>(&a, &b, &mut c).unwrap();
+        batched_sgemm_t(a.data(), b.data(), c2.data_mut(), m, n, k);
+        assert_close(c.data(), c2.data());
+    }
 
-            let a = Tensor {
-                shape: vec![m, k],
-                data: (0..m * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let b = Tensor {
-                shape: vec![n, k],
-                data: (0..n * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let mut c = Tensor {
-                shape: vec![m, n],
-                data: vec![0.0; m * n],
-            };
-            matmul::<true>(&a, &b, &mut c).unwrap();
+    #[test]
+    #[cfg(any(feature = "cblas", feature = "intel-mkl", feature = "faer-rs"))]
+    fn ggml_comparison() {
+        let m = 6;
+        let n = 768 * 3;
+        let k = 768;
 
-            assert_eq!(c.data(), [30.0, 70.0, 70.0, 174.0, 110.0, 278.0]);
-        }
+        let a = Tensor {
+            shape: vec![m, k],
+            data: (0..m * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let b = Tensor {
+            shape: vec![k, n],
+            data: (0..n * k).map(|s| (s + 1) as f32).collect(),
+        };
+        let mut c = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        let mut c2 = Tensor {
+            shape: vec![m, n],
+            data: vec![0.0; m * n],
+        };
+        matmul::<false>(&a, &b, &mut c).unwrap();
+        batched_sgemm(a.data(), &b.data(), c2.data_mut(), m, n, k);
+        assert_close(&c.data(), &c2.data());
+    }
 
-        #[test]
-        #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
-        fn ggml_comparison_t() {
-            let m = 6;
-            let n = 768 * 3;
-            let k = 768;
-
-            let a = Tensor {
-                shape: vec![m, k],
-                data: (0..m * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let b = Tensor {
-                shape: vec![n, k],
-                data: (0..n * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let mut c = Tensor {
-                shape: vec![m, n],
-                data: vec![0.0; m * n],
-            };
-            let mut c2 = Tensor {
-                shape: vec![m, n],
-                data: vec![0.0; m * n],
-            };
-            matmul::<true>(&a, &b, &mut c).unwrap();
-            batched_sgemm_t(a.data(), b.data(), c2.data_mut(), m, n, k);
-            assert_close(c.data(), c2.data());
-        }
-
-        #[test]
-        #[cfg(any(feature = "cblas", feature = "intel-mkl", feature = "faer-rs"))]
-        fn ggml_comparison() {
-            let m = 6;
-            let n = 768 * 3;
-            let k = 768;
-
-            let a = Tensor {
-                shape: vec![m, k],
-                data: (0..m * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let b = Tensor {
-                shape: vec![k, n],
-                data: (0..n * k).map(|s| (s + 1) as f32).collect(),
-            };
-            let mut c = Tensor {
-                shape: vec![m, n],
-                data: vec![0.0; m * n],
-            };
-            let mut c2 = Tensor {
-                shape: vec![m, n],
-                data: vec![0.0; m * n],
-            };
-            matmul::<false>(&a, &b, &mut c).unwrap();
-            batched_sgemm(a.data(), &b.data(), c2.data_mut(), m, n, k);
-            assert_close(&c.data(), &c2.data());
-        }
-
-        #[cfg(any(feature = "cblas", feature = "intel-mkl", feature = "faer-rs"))]
-        pub fn assert_close(a: &[f32], b: &[f32]) {
-            a.iter().zip(b.iter()).for_each(|(&a, &b)| {
-                if ((a - b) / a).abs() > 1e-5 {
-                    panic!("{a:?} != {b:?}");
-                }
-            });
-        }
+    #[cfg(any(feature = "cblas", feature = "intel-mkl", feature = "faer-rs"))]
+    pub fn assert_close(a: &[f32], b: &[f32]) {
+        a.iter().zip(b.iter()).for_each(|(&a, &b)| {
+            if ((a - b) / a).abs() > 1e-5 {
+                panic!("{a:?} != {b:?}");
+            }
+        });
     }
 }

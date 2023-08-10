@@ -1,9 +1,12 @@
 #![feature(test)]
 
 extern crate test;
+#[cfg(feature = "f16")]
 use half::f16;
 use test::{black_box, Bencher};
 
+#[cfg(feature = "f16")]
+use ggblas::f16::{batched_sgemm_t_f16_mixed, batched_sgemm_t_f16_pure};
 #[cfg(any(
     feature = "intel-mkl",
     feature = "cblas",
@@ -12,11 +15,11 @@ use test::{black_box, Bencher};
 ))]
 use ggblas::tests::matmul;
 use ggblas::tests::Tensor;
-use ggblas::{batched_sgemm, batched_sgemm_t, batched_sgemm_t_f16_mixed, batched_sgemm_t_f16_pure};
+use ggblas::{batched_sgemm, batched_sgemm_t};
 
-const M: usize = 6;
-const N: usize = 768 * 3;
-const K: usize = 768;
+const M: usize = 1;
+const N: usize = 4096 * 3;
+const K: usize = 4096;
 
 #[bench]
 #[cfg(feature = "intel-mkl")]
@@ -179,6 +182,7 @@ fn bench_ggblas_t_f32(bench: &mut Bencher) {
     bench.iter(|| black_box(batched_sgemm_t(a.data(), b.data(), c.data_mut(), M, N, K)));
 }
 
+#[cfg(feature = "f16")]
 #[bench]
 fn bench_ggblas_t_f16_mixed(bench: &mut Bencher) {
     let a_data = vec![0.0; M * K];
@@ -196,6 +200,7 @@ fn bench_ggblas_t_f16_mixed(bench: &mut Bencher) {
     });
 }
 
+#[cfg(feature = "f16")]
 #[bench]
 fn bench_ggblas_t_f16_pure(bench: &mut Bencher) {
     let a_data = vec![f16::from_f32(0.0); M * K];
@@ -212,6 +217,7 @@ fn bench_ggblas_t_f16_pure(bench: &mut Bencher) {
         ))
     });
 }
+
 #[bench]
 fn bench_ggblas_n(bench: &mut Bencher) {
     let a = Tensor {

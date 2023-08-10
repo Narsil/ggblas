@@ -127,6 +127,7 @@ pub mod simd128_f16;
 mod avx_f16;
 
 #[cfg(feature = "f16")]
+#[cfg(not(any(target_arch = "arm", target_arch = "aarch64")))]
 pub mod f16 {
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     #[cfg(target_feature = "avx")]

@@ -211,6 +211,7 @@ pub fn batched_sgemm(ap: &[f32], bp: &[f32], cp: &mut [f32], m: usize, n: usize,
 }
 
 #[cfg(feature = "f16")]
+#[cfg(not(any(target_arch = "arm", target_arch = "aarch64")))]
 pub mod f16 {
     use super::get_pool;
     use super::raw::f16::{
@@ -293,10 +294,12 @@ pub mod tests {
 
     #[cfg(test)]
     #[cfg(feature = "f16")]
+    #[cfg(not(any(target_arch = "arm", target_arch = "aarch64")))]
     use crate::f16::{batched_sgemm_t_f16_mixed, batched_sgemm_t_f16_pure};
 
     #[cfg(test)]
     #[cfg(feature = "f16")]
+    #[cfg(not(any(target_arch = "arm", target_arch = "aarch64")))]
     use half::f16;
 
     #[cfg(any(feature = "cblas", feature = "intel-mkl"))]
@@ -526,6 +529,7 @@ pub mod tests {
 
     #[test]
     #[cfg(feature = "f16")]
+    #[cfg(not(any(target_arch = "arm", target_arch = "aarch64")))]
     fn ggml_simple_f16_pure() {
         let m = 3;
         let n = 2;
@@ -543,6 +547,7 @@ pub mod tests {
 
     #[test]
     #[cfg(feature = "f16")]
+    #[cfg(not(any(target_arch = "arm", target_arch = "aarch64")))]
     fn ggml_simple_f16() {
         let m = 3;
         let n = 2;
